@@ -2,9 +2,12 @@ import time
 
 import numpy as np
 import tensorflow as tf
-
+import sys
+from ..models.net import neural_net
 from tqdm import tqdm
 from pinnstf2 import utils
+import pinnstf2
+import h5py
 
 log = utils.get_pylogger(__name__)
 
@@ -159,7 +162,20 @@ class Trainer:
 
         return model
     
-    def fit(self, model, datamodule):    
+    def save_train_data(self, filename, net):
+        with h5py.File(filename, 'w') as f:
+            f.create_group('weights')
+            f.create_group('biases')
+            f.create_group('gammas')
+            print("check")
+            for layer, weight in enumerate(net.weights):
+                f['weights'].create_dataset(str(layer), data=weight)
+            for layer, biase in enumerate(net.biases):
+                f['biases'].create_dataset(str(layer), data=biase)
+            for layer, gamma in enumerate(net.gammas):
+                f['gammas'].create_dataset(str(layer), data=gamma)            
+    
+    def fit(self, model, datamodule, net):    
         """
         Main function to fit the model on the provided data.
 
@@ -188,25 +204,33 @@ class Trainer:
         # Initialize the progress bar if enabled
         if self.enable_progress_bar:
             self.pbar = self.initalize_tqdm(self.max_epochs)
+
+        #ckpt = tf.train.Checkpoint(weight=net.weights)
         
         for epoch in range(self.current_epoch, self.max_epochs):
             
             start_time=time.time()
 
-            self.train_loop(model, train_dataloader)
+            self.train_loop(model, train_dataloader, epoch)
             
             elapsed_time = time.time() - start_time
             self.time_list.append(elapsed_time)
-        
+
             # Perform validation at specified intervals
             if epoch % self.check_val_every_n_epoch == 0:
                 self.eval_loop(model, val_dataloader)
+                
+            #save trained parameter
+            if epoch == self.max_epochs-1:
+                filename = str(epoch) + "_trained.h5"
+                self.save_train_data(filename, net)
 
+                
         if self.enable_progress_bar:
             self.pbar.close()
 
     
-    def train_loop(self, model, train_dataloader):
+    def train_loop(self, model, train_dataloader, current_epoch):
         """
         Training loop. 
 
@@ -230,8 +254,14 @@ class Trainer:
         
         if self.enable_progress_bar:
             self.pbar.update(1)
-            description = self.callback_pbar('train/loss', loss.numpy(), extra_variables)
+            description = self.callback_pbar(str(current_epoch) + ', train/loss', loss.numpy(), extra_variables)
+
             self.pbar.set_description(description)
+            if current_epoch % 100 == 0:
+                f = open('train_loss_log.txt', 'a')
+                f.write(str(current_epoch) + ' ' + str(loss.numpy()))
+                f.write('\n')
+                f.close()
             self.pbar.refresh() 
 
     
@@ -292,7 +322,12 @@ class Trainer:
             
             # Join all descriptions into a single string and set it
             full_description = ', '.join(descriptions)
+            
             self.pbar.set_postfix_str(full_description)
+            f = open('val_err_log.txt', 'a')
+            f.write(full_description)
+            f.write('\n')
+            f.close()
             self.pbar.refresh() 
         return loss, error_dict
 

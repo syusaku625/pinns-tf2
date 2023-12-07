@@ -4,7 +4,7 @@ import hydra
 import rootutils
 import numpy as np
 import tensorflow as tf
-
+import pandas as pd
 import pinnstf2
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
@@ -19,19 +19,90 @@ def read_data_fn(root_path):
     :return: Processed data in the form of a PointCloudData object.
     """
 
-    data = pinnstf2.utils.load_data(root_path, "Aneurysm3D.mat")
+    print(root_path)
+    time_file = root_path + 'time.csv'
+    coordinate_file = root_path + 'coordinate.csv'
 
-    t_star = data["t_star"]  # T x 1
-    x_star = data["x_star"]  # N x 1
-    y_star = data["y_star"]  # N x 1
-    z_star = data["z_star"]  # N x 1
+    time = pd.read_csv(time_file)
+    time = time['Time'].to_numpy()
+    time = time.reshape(-1,1)
 
-    U_star = data["U_star"]  # N x T
-    V_star = data["V_star"]  # N x T
-    W_star = data["W_star"]  # N x T
-    P_star = data["P_star"]  # N x T
-    C_star = data["C_star"]  # N x T
+    coordinate = pd.read_csv(coordinate_file)
+    x = coordinate['Points_0'].to_numpy()
+    y = coordinate['Points_1'].to_numpy()
+    z = coordinate['Points_2'].to_numpy()
+    x = x.reshape(-1,1)
+    y = y.reshape(-1,1)
+    z = z.reshape(-1,1)
 
+    u = np.array([])
+    v = np.array([])
+    w = np.array([])
+    p = np.array([])
+    c = np.array([])
+
+    for i in range (0, 40):
+        filename = root_path + 'velocity_data/' + 'velocity_' + str(i) + '.csv'
+        tmp_df = pd.read_csv(filename)
+        tmp_u = tmp_df['Velocity:0'].to_numpy()
+        tmp_v = tmp_df['Velocity:1'].to_numpy()
+        tmp_w = tmp_df['Velocity:2'].to_numpy()
+        tmp_p = tmp_df['Pressure'].to_numpy()
+        tmp_c = tmp_df['PassiveScalar'].to_numpy()
+        u = np.append(u, tmp_u)
+        v = np.append(v, tmp_v)
+        w = np.append(w, tmp_w)
+        p = np.append(p, tmp_p)
+        c = np.append(c, tmp_c)
+
+    u = u.reshape(-1,len(x))
+    v = v.reshape(-1,len(x))
+    w = w.reshape(-1,len(x))
+    p = p.reshape(-1,len(x))
+    c = c.reshape(-1,len(x))
+
+    u = u.T
+    v = v.T
+    w = w.T
+    p = p.T
+    c = c.T
+
+    t_star = time * (0.1 / 3e-4)
+    x_star = x / 3e-4
+    y_star = y / 3e-4
+    z_star = z / 3e-4
+    U_star = u / 0.1
+    V_star = v / 0.1
+    W_star = w / 0.1
+    P_star = p / (1e3 * 0.1 * 0.1)
+    C_star = c
+
+    print(t_star.shape)
+    print(x_star.shape)
+    print(y_star.shape)
+    print(z_star.shape)
+    print(U_star.shape)
+    print(V_star.shape)
+    print(W_star.shape)
+    print(P_star.shape)
+    print(C_star.shape)
+
+    print(t_star)
+    print(U_star)
+    print(V_star)
+    print(W_star)
+
+    #t_star = data["t_star"]  # T x 1
+    #x_star = data["x_star"]  # N x 1
+    #y_star = data["y_star"]  # N x 1
+    #z_star = data["z_star"]  # N x 1
+#
+    #U_star = data["U_star"]  # N x T
+    #V_star = data["V_star"]  # N x T
+    #W_star = data["W_star"]  # N x T
+    #P_star = data["P_star"]  # N x T
+    #C_star = data["C_star"]  # N x T
+#
     return pinnstf2.data.PointCloudData(
         spatial=[x_star, y_star, z_star],
         time=[t_star],
@@ -54,8 +125,8 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
     :return: Dictionary of computed PDE terms for each variable.
     """
 
-    Pec = 1.0 / 0.0101822
-    Rey = 1.0 / 0.0101822
+    Pec = 3.0 / 0.101822
+    Rey = 3.0 / 0.101822
 
     Y = tf.stack([outputs["c"], outputs["u"], outputs["v"], outputs["w"], outputs["p"]], axis=1)    
     shape = tf.shape(Y)

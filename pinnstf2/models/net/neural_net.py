@@ -2,6 +2,7 @@ from typing import List, Dict
 
 import numpy as np
 import tensorflow as tf
+import h5py
 
 class FCN(object):
     def __init__(self, layers, lb, ub, output_names, discrete: bool = False, dtype='float32') -> None:
@@ -138,6 +139,23 @@ class NetHFM(object):
         self.X_std = tf.constant(std, dtype=tf.float32)
 
         self.initalize_net(layers)
+
+    def read_h5_trained_data(self, filename):
+        with h5py.File(filename, 'r') as f:
+            weights, biases, gammas = [], [], []
+            for i in range (0, 11):
+                print(i)
+                tmp_weight = f['weights'][str(i)]
+                weights.append(tmp_weight[()])
+            for i in range (0, 11):
+                tmp_biase = f['biases'][str(i)]
+                biases.append(tmp_biase[()])
+            for i in range (0, 11):
+                tmp_gamma = f['gammas'][str(i)]
+                gammas.append(tmp_gamma[()])
+        
+        return weights, biases, gammas
+    
         
     def initalize_net(self, layers: List) -> None:
         """Initialize the neural network weights, biases, and gammas.
@@ -148,7 +166,16 @@ class NetHFM(object):
         self.weights = []
         self.biases = []
         self.gammas = []
+
+        #if use trained data out comment!
+        #filename = "999_trained.h5"
+        #read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
+        #for i in range(0, 11):
+        #    self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
+        #    self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
+        #    self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
         
+        #if not use trained data out comment !
         for l in range(0,self.num_layers-1):
             in_dim = layers[l]
             out_dim = layers[l+1]

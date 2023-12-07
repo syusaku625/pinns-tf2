@@ -137,7 +137,7 @@ def train(
         log.info("Starting training!")
         start_time = time.time()
         try:
-            trainer.fit(model=model, datamodule=datamodule)
+            trainer.fit(model=model, datamodule=datamodule, net=net)
         except KeyboardInterrupt:
             print("Training Stopped.")
         log.info(f"Elapsed time: {time.time() - start_time}")

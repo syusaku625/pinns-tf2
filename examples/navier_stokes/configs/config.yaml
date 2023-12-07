@@ -53,8 +53,8 @@ model:
     l2: 0.0
 
 trainer:
-  max_epochs: 250000
-  check_val_every_n_epoch: 250001
+  max_epochs: 100000
+  check_val_every_n_epoch: 101
 
 train: true
 val: true
@@ -67,10 +67,6 @@ optimized_metric:
   extra_variables:
     - l1
     - l2
-
-plotting:
-  _target_: pinnstf2.utils.plot_navier_stokes
-  _partial_: true
 
 task_name: navier_stokes
 

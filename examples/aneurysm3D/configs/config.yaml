@@ -2,7 +2,7 @@ defaults:
   - train
   - _self_
 
-batch_size: 8192
+batch_size: 10000
 
 mesh:
   _target_: pinnstf2.data.PointCloud
@@ -15,17 +15,12 @@ train_datasets:
       _partial_: true
       solution:
         - c
-
-  - mesh_sampler:
-      _target_: pinnstf2.data.MeshSampler
-      _partial_: true
       collection_points:
         - e1
         - e2
         - e3
         - e4
         - e5
-      use_lhs: false
 
 val_dataset:
   - mesh_sampler:
@@ -42,7 +37,7 @@ test_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 100
+      idx_t: 39
       solution:
         - c
         - u
@@ -54,7 +49,7 @@ pred_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 100
+      idx_t: 39
       solution:
         - c
         - u
@@ -74,9 +69,10 @@ net:
 
 model:
   loss_fn: mse
+  
 
 trainer:
-  max_epochs: 10000
+  max_epochs: 0
   check_val_every_n_epoch: 100
 
 train: true
@@ -90,6 +86,10 @@ optimized_metric:
     - v
     - w
     - p
+
+plotting:
+  _target_: pinnstf2.utils.plot_navier_stokes
+  _partial_: true
 
 task_name: aneurysm3D
 

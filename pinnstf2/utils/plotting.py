@@ -6,6 +6,7 @@ import matplotlib as mpl
 import matplotlib.gridspec as gridspec
 import numpy as np
 import scipy.io
+import pandas as pd
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata
@@ -66,67 +67,87 @@ def savefig(filename, crop=True):
 
     log.info(f"Image saved at {filename}")
 
+def plot_Aneurysm3D(mesh, preds, train_datasets, val_dataset, file_name):
+    print('check')
+    exit(1)
 
 def plot_navier_stokes(mesh, preds, train_datasets, val_dataset, file_name):
-    """Plot Navier-Stokes continuous inverse PDE."""
+    print('check')
+    p_pred = preds["p"]
+    u_pred = preds["u"]
+    v_pred = preds["v"]
+    w_pred = preds["w"]
+    c_pred = preds["c"]
 
-    x, t, u = train_datasets[0][:]
-    p_star = mesh.solution["p"][:, 100]
-    p_pred = preds["p"].reshape(p_star.shape)
-    X_star = np.hstack(mesh.spatial_domain)
-    lb = X_star.min(0)
-    ub = X_star.max(0)
-    nn = 200
-    x = np.linspace(lb[0], ub[0], nn)
-    y = np.linspace(lb[1], ub[1], nn)
-    X, Y = np.meshgrid(x, y)
-    x_star = X_star[:, 0:1]
-    y_star = X_star[:, 1:2]
+    df_pred = pd.DataFrame(p_pred)
+    df_pred.to_csv('test_pred_p.csv')
+    df_pred = pd.DataFrame(u_pred)
+    df_pred.to_csv('test_pred_u.csv')
+    df_pred = pd.DataFrame(v_pred)
+    df_pred.to_csv('test_pred_v.csv')
+    df_pred = pd.DataFrame(w_pred)
+    df_pred.to_csv('test_pred_w.csv')
+    df_pred = pd.DataFrame(c_pred)
+    df_pred.to_csv('test_pred_c.csv')
 
-    PP_star = griddata(X_star, p_pred.flatten(), (X, Y), method="cubic")
-    P_exact = griddata(X_star, p_star.flatten(), (X, Y), method="cubic")
-
-    fig, ax = newfig(1.015, 0.8)
-    ax.axis("off")
-    gs2 = gridspec.GridSpec(1, 2)
-    gs2.update(top=1, bottom=1 - 1 / 2, left=0.1, right=0.9, wspace=0.5)
-    ax = plt.subplot(gs2[:, 0])
-    h = ax.imshow(
-        PP_star,
-        interpolation="nearest",
-        cmap="rainbow",
-        extent=[x_star.min(), x_star.max(), y_star.min(), y_star.max()],
-        origin="lower",
-        aspect="auto",
-    )
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-
-    fig.colorbar(h, cax=cax)
-    ax.set_xlabel("$x$")
-    ax.set_ylabel("$y$")
-    ax.set_aspect("equal", "box")
-    ax.set_title("Predicted pressure", fontsize=10)
-
-    # Exact p(t,x,y)
-    ax = plt.subplot(gs2[:, 1])
-    h = ax.imshow(
-        P_exact,
-        interpolation="nearest",
-        cmap="rainbow",
-        extent=[x_star.min(), x_star.max(), y_star.min(), y_star.max()],
-        origin="lower",
-        aspect="auto",
-    )
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-
-    fig.colorbar(h, cax=cax)
-    ax.set_xlabel("$x$")
-    ax.set_ylabel("$y$")
-    ax.set_aspect("equal", "box")
-    ax.set_title("Exact pressure", fontsize=10)
-    savefig(file_name + "/fig")
+    #"""Plot Navier-Stokes continuous inverse PDE."""
+    #x, t, u = train_datasets[0][:]
+    #p_star = mesh.solution["p"][:, 100]
+    #p_pred = preds["p"].reshape(p_star.shape)
+    #X_star = np.hstack(mesh.spatial_domain)
+    #lb = X_star.min(0)
+    #ub = X_star.max(0)
+    #nn = 200
+    #x = np.linspace(lb[0], ub[0], nn)
+    #y = np.linspace(lb[1], ub[1], nn)
+    #X, Y = np.meshgrid(x, y)
+    #x_star = X_star[:, 0:1]
+    #y_star = X_star[:, 1:2]
+#
+    #PP_star = griddata(X_star, p_pred.flatten(), (X, Y), method="cubic")
+    #P_exact = griddata(X_star, p_star.flatten(), (X, Y), method="cubic")
+#
+    #fig, ax = newfig(1.015, 0.8)
+    #ax.axis("off")
+    #gs2 = gridspec.GridSpec(1, 2)
+    #gs2.update(top=1, bottom=1 - 1 / 2, left=0.1, right=0.9, wspace=0.5)
+    #ax = plt.subplot(gs2[:, 0])
+    #h = ax.imshow(
+    #    PP_star,
+    #    interpolation="nearest",
+    #    cmap="rainbow",
+    #    extent=[x_star.min(), x_star.max(), y_star.min(), y_star.max()],
+    #    origin="lower",
+    #    aspect="auto",
+    #)
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", size="5%", pad=0.05)
+#
+    #fig.colorbar(h, cax=cax)
+    #ax.set_xlabel("$x$")
+    #ax.set_ylabel("$y$")
+    #ax.set_aspect("equal", "box")
+    #ax.set_title("Predicted pressure", fontsize=10)
+#
+    ## Exact p(t,x,y)
+    #ax = plt.subplot(gs2[:, 1])
+    #h = ax.imshow(
+    #    P_exact,
+    #    interpolation="nearest",
+    #    cmap="rainbow",
+    #    extent=[x_star.min(), x_star.max(), y_star.min(), y_star.max()],
+    #    origin="lower",
+    #    aspect="auto",
+    #)
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", size="5%", pad=0.05)
+#
+    #fig.colorbar(h, cax=cax)
+    #ax.set_xlabel("$x$")
+    #ax.set_ylabel("$y$")
+    #ax.set_aspect("equal", "box")
+    #ax.set_title("Exact pressure", fontsize=10)
+    #savefig(file_name + "/fig")
 
 
 def plot_kdv(mesh, preds, train_datasets, val_dataset, file_name):
