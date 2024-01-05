@@ -11,6 +11,16 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 from omegaconf import DictConfig
 
+#L = 4e-4
+#U = 2e0
+#rho = 1e3
+#mu = 1e-3
+
+L = 3e-4
+U = 0.1
+rho = 1e3
+mu = 1e-3
+
 
 def read_data_fn(root_path):
     """Read and preprocess data from the specified root path.
@@ -20,14 +30,20 @@ def read_data_fn(root_path):
     """
 
     print(root_path)
-    time_file = root_path + 'time.csv'
-    coordinate_file = root_path + 'coordinate.csv'
+    #time_file = root_path + 'input_inverse' + '/' + 'Time_inverse.csv'
+    #coordinate_file = root_path + 'input_inverse' + '/' + 'coordinate_inverse.csv'
+
+    time_file = root_path + 'test_case_data' + '/' + 'time.csv'
+    coordinate_file = root_path + 'test_case_data' + '/' + 'coordinate.csv'
 
     time = pd.read_csv(time_file)
     time = time['Time'].to_numpy()
     time = time.reshape(-1,1)
 
     coordinate = pd.read_csv(coordinate_file)
+    #x = coordinate['Position_0'].to_numpy()
+    #y = coordinate['Position_1'].to_numpy()
+    #z = coordinate['Position_2'].to_numpy()
     x = coordinate['Points_0'].to_numpy()
     y = coordinate['Points_1'].to_numpy()
     z = coordinate['Points_2'].to_numpy()
@@ -42,13 +58,19 @@ def read_data_fn(root_path):
     c = np.array([])
 
     for i in range (0, 40):
-        filename = root_path + 'velocity_data/' + 'velocity_' + str(i) + '.csv'
+        #filename = root_path + 'input_inverse/' + 'contrast' + str(i) + '.csv'
+        filename = root_path + 'test_case_data/velocity_data/' + 'velocity_' + str(i) + '.csv'
         tmp_df = pd.read_csv(filename)
         tmp_u = tmp_df['Velocity:0'].to_numpy()
         tmp_v = tmp_df['Velocity:1'].to_numpy()
         tmp_w = tmp_df['Velocity:2'].to_numpy()
         tmp_p = tmp_df['Pressure'].to_numpy()
         tmp_c = tmp_df['PassiveScalar'].to_numpy()
+        #tmp_c = tmp_df['concentration[-]'].to_numpy()
+        #tmp_u = np.zeros(tmp_c.shape)
+        #tmp_v = np.zeros(tmp_c.shape)
+        #tmp_w = np.zeros(tmp_c.shape)
+        #tmp_p = np.zeros(tmp_c.shape)
         u = np.append(u, tmp_u)
         v = np.append(v, tmp_v)
         w = np.append(w, tmp_w)
@@ -67,42 +89,23 @@ def read_data_fn(root_path):
     p = p.T
     c = c.T
 
-    t_star = time * (0.1 / 3e-4)
-    x_star = x / 3e-4
-    y_star = y / 3e-4
-    z_star = z / 3e-4
-    U_star = u / 0.1
-    V_star = v / 0.1
-    W_star = w / 0.1
-    P_star = p / (1e3 * 0.1 * 0.1)
+    t_star = time * (U / L)
+    x_star = x / L
+    y_star = y / L
+    z_star = z / L
+    U_star = u / U
+    V_star = v / U
+    W_star = w / U
+    P_star = p / (rho * U * U)
     C_star = c
 
     print(t_star.shape)
     print(x_star.shape)
     print(y_star.shape)
     print(z_star.shape)
-    print(U_star.shape)
-    print(V_star.shape)
-    print(W_star.shape)
-    print(P_star.shape)
     print(C_star.shape)
-
     print(t_star)
-    print(U_star)
-    print(V_star)
-    print(W_star)
 
-    #t_star = data["t_star"]  # T x 1
-    #x_star = data["x_star"]  # N x 1
-    #y_star = data["y_star"]  # N x 1
-    #z_star = data["z_star"]  # N x 1
-#
-    #U_star = data["U_star"]  # N x T
-    #V_star = data["V_star"]  # N x T
-    #W_star = data["W_star"]  # N x T
-    #P_star = data["P_star"]  # N x T
-    #C_star = data["C_star"]  # N x T
-#
     return pinnstf2.data.PointCloudData(
         spatial=[x_star, y_star, z_star],
         time=[t_star],
@@ -125,9 +128,6 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
     :return: Dictionary of computed PDE terms for each variable.
     """
 
-    Pec = 3.0 / 0.101822
-    Rey = 3.0 / 0.101822
-
     Y = tf.stack([outputs["c"], outputs["u"], outputs["v"], outputs["w"], outputs["p"]], axis=1)    
     shape = tf.shape(Y)
     Y = tf.reshape(Y, [shape[0], -1])
@@ -140,6 +140,9 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
     Y_xx = pinnstf2.utils.fwd_gradient(Y_x, x)
     Y_yy = pinnstf2.utils.fwd_gradient(Y_y, y)
     Y_zz = pinnstf2.utils.fwd_gradient(Y_z, z)
+
+    Pec = rho * L * U / mu
+    Rey = rho * L * U / mu
 
     c = Y[:,0:1]
     u = Y[:,1:2]

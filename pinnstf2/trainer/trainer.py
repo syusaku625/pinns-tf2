@@ -208,22 +208,27 @@ class Trainer:
         #ckpt = tf.train.Checkpoint(weight=net.weights)
         
         for epoch in range(self.current_epoch, self.max_epochs):
-            
-            start_time=time.time()
+            try:
+                start_time=time.time()
 
-            self.train_loop(model, train_dataloader, epoch)
-            
-            elapsed_time = time.time() - start_time
-            self.time_list.append(elapsed_time)
+                self.train_loop(model, train_dataloader, epoch)
 
-            # Perform validation at specified intervals
-            if epoch % self.check_val_every_n_epoch == 0:
-                self.eval_loop(model, val_dataloader)
-                
-            #save trained parameter
-            if epoch == self.max_epochs-1:
+                elapsed_time = time.time() - start_time
+                self.time_list.append(elapsed_time)
+
+                # Perform validation at specified intervals
+                if epoch % self.check_val_every_n_epoch == 0:
+                    self.eval_loop(model, val_dataloader)
+
+                #save trained parameter
+                if epoch == self.max_epochs-1:
+                    filename = str(epoch) + "_trained.h5"
+                    self.save_train_data(filename, net)
+            except KeyboardInterrupt:
                 filename = str(epoch) + "_trained.h5"
                 self.save_train_data(filename, net)
+                raise
+
 
                 
         if self.enable_progress_bar:

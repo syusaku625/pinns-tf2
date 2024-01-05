@@ -21,6 +21,13 @@ train_datasets:
         - e3
         - e4
         - e5
+  - dirichlet_boundary_condition:
+      _target_: pinnstf2.data.DirichletBoundaryCondition
+      _partial_: true
+      solution:
+        - u
+        - v
+        - w
 
 val_dataset:
   - mesh_sampler:
@@ -28,10 +35,6 @@ val_dataset:
       _partial_: true
       solution:
         - c
-        - u
-        - v
-        - w
-        - p
 
 test_dataset:
   - mesh_sampler:
@@ -40,10 +43,6 @@ test_dataset:
       idx_t: 39
       solution:
         - c
-        - u
-        - v
-        - w
-        - p
 
 pred_dataset:
   - mesh_sampler:
@@ -72,7 +71,7 @@ model:
   
 
 trainer:
-  max_epochs: 0
+  max_epochs: 300000
   check_val_every_n_epoch: 100
 
 train: true

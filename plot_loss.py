@@ -23,7 +23,7 @@ time_steps = time_steps[:] * 100
 
 # Plotting the loss values
 plt.figure(figsize=(10, 6))
-plt.xlim(0,900000)
+#plt.xlim(0,900000)
 plt.yscale("log")
 plt.plot(time_steps, loss_values, marker='o', linestyle='-')
 plt.title('Loss Value Changes Over Time')
