@@ -45,4 +45,17 @@ for count, i in enumerate(contrast_value_interpolate):
     name = ['concentration[-]']
     df.to_csv(output_filename, header = name, index = None)
 
+filename = "Time.csv"
+df = pd.read_csv(filename)
+tmp_value = df['Time'].to_numpy()
+f = interpolate.interp1d(x, tmp_value)
+time_interpolate = f(xnew)
+
+output_filename = 'Time_interpolated.csv'
+df = pd.DataFrame(time_interpolate)
+name = ['Time']
+df.to_csv(output_filename, header = name, index = None)
+
+
+
     
