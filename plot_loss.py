@@ -7,7 +7,7 @@ def read_loss_values(file_path):
     with open(file_path, 'r') as file:
         contents = file.readlines()
         for i in contents:
-            loss_values = i.split(' ')[1]
+            loss_values = i.split(' ')[1].replace(',','')
             loss.append(float(loss_values))
     return loss
 
@@ -25,7 +25,7 @@ time_steps = time_steps[:] * 100
 plt.figure(figsize=(10, 6))
 #plt.xlim(0,900000)
 plt.yscale("log")
-plt.plot(time_steps, loss_values, marker='o', linestyle='-')
+plt.plot(time_steps, loss_values, marker='o', linestyle='-', markersize=1)
 plt.title('Loss Value Changes Over Time')
 plt.xlabel('Epoch')
 plt.ylabel('Loss Value')

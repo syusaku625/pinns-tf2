@@ -141,16 +141,16 @@ class NetHFM(object):
         self.initalize_net(layers)
 
     def read_h5_trained_data(self, filename):
+        loop = 11
         with h5py.File(filename, 'r') as f:
             weights, biases, gammas = [], [], []
-            for i in range (0, 11):
-                print(i)
+            for i in range (0, loop):
                 tmp_weight = f['weights'][str(i)]
                 weights.append(tmp_weight[()])
-            for i in range (0, 11):
+            for i in range (0, loop):
                 tmp_biase = f['biases'][str(i)]
                 biases.append(tmp_biase[()])
-            for i in range (0, 11):
+            for i in range (0, loop):
                 tmp_gamma = f['gammas'][str(i)]
                 gammas.append(tmp_gamma[()])
         
@@ -167,29 +167,30 @@ class NetHFM(object):
         self.biases = []
         self.gammas = []
 
-        #if use trained data out comment!
-        #filename = "999_trained.h5"
-        #read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
-        #for i in range(0, 11):
-        #    self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
-        #    self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
-        #    self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
+        #if use trained data comment out!
+        filename = "97960_trained.h5"
+        read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
+        for i in range(0, 11):
+            self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
+            self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
+            self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
         
-        #if not use trained data out comment !
-        for l in range(0,self.num_layers-1):
-            in_dim = layers[l]
-            out_dim = layers[l+1]
-            W = np.random.normal(size=[in_dim, out_dim])
-            b = np.zeros([1, out_dim])
-            g = np.ones([1, out_dim])
-            # tensorflow variables
-            self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
-            self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
-            self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
+        #if not use trained data comment out!
+        #for l in range(0,self.num_layers-1):
+        #    in_dim = layers[l]
+        #    out_dim = layers[l+1]
+        #    W = np.random.normal(size=[in_dim, out_dim])
+        #    b = np.zeros([1, out_dim])
+        #    g = np.ones([1, out_dim])
+        #    # tensorflow variables
+        #    self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
+        #    self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
+        #    self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
 
         self.trainable_variables.extend(self.weights)
         self.trainable_variables.extend(self.biases)
         self.trainable_variables.extend(self.gammas)
+
     
     def __call__(self, spatial: List[tf.Tensor], time: tf.Tensor) -> Dict[str, tf.Tensor]:
         """Perform a forward pass through the network.

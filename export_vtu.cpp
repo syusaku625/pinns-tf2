@@ -43,6 +43,8 @@ void export_vtu(const std::string &file, vector<vector<double>> x, vector<vector
   for (int i = 0; i < element.size(); i++){
     if(element[i].size()==4) fprintf(fp, "%d\n", 10);
     else if(element[i].size()==6) fprintf(fp, "%d\n", 13);
+    else if(element[i].size()==5) fprintf(fp, "%d\n", 14);
+    else if(element[i].size()==8) fprintf(fp, "%d\n", 42);
   }
   fprintf(fp, "</DataArray>\n");
   fprintf(fp, "</Cells>\n");
@@ -167,7 +169,7 @@ void read_geometry_node(std::vector<std::vector<double>> &x,int &numOfNode,const
     istringstream stream(str);
 
     for(int j=0;j<3;j++){
-      getline(stream,tmp,' ');
+      getline(stream,tmp,',');
       x[i][j] = stof(tmp);
     }
   }
@@ -195,7 +197,7 @@ void read_geometry_element(std::vector<vector<int>> &element, const int &numOfEl
     getline(ifs, str);
     istringstream ss(str);
     for(int j=0; j<element[i].size(); j++){
-      getline(ss, str, ' ');
+      getline(ss, str, ',');
       element[i][j] = stoi(str);
     }
   }
@@ -223,10 +225,10 @@ vector<double> read_scalar_value(string filename)
 
 int main()
 {
-    string base_dir = "post_process_mesh_data";
-    string x_file = base_dir + "/x.dat";
-    string element_file = base_dir + "/element.dat";
-    string elementType_file = base_dir + "/elementType.dat";
+    string base_dir = "data/input_inverse";
+    string x_file = base_dir + "/node.csv";
+    string element_file = base_dir + "/element.csv";
+    string elementType_file = base_dir + "/elementType.csv";
 
     vector<vector<double>> x;
     vector<vector<int>> element;
@@ -239,7 +241,9 @@ int main()
     element.resize(numOfElm);
     for(int i=0; i<numOfElm; i++){
       if(elementType[i]==10) element[i].resize(4);
+      else if(elementType[i]==14) element[i].resize(5);
       else if(elementType[i]==13) element[i].resize(6);
+      else if(elementType[i]==42) element[i].resize(8);
     }
     cout << "read element" << endl;
     read_geometry_element(element, numOfElm, element_file);

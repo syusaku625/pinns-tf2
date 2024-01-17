@@ -26,6 +26,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.png
+*.vtu
+*.txt
+a.out
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -159,3 +163,5 @@ Untitled.ipynb
 /Untitled.ipynb
 outputs
 /outputs/
+
+a.out*

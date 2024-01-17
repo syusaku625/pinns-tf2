@@ -35,6 +35,8 @@ class MeshSampler(SamplerBase):
         self.collection_points_names = collection_points
         self.idx_t = idx_t
 
+        
+
         # On a time step.
         if self.idx_t:
             flatten_mesh = mesh.on_initial_boundary(self.solution_names, self.idx_t)
@@ -54,6 +56,8 @@ class MeshSampler(SamplerBase):
                                          num_or_size_splits=self.solution_sampled.shape[1],
                                          axis=1)
 
+    
+        
         # Collection Points only.
         else:
             (self.spatial_domain_sampled, self.time_domain_sampled) = self.convert_to_tensor(
@@ -65,8 +69,11 @@ class MeshSampler(SamplerBase):
         self.spatial_domain_sampled = tf.split(self.spatial_domain_sampled,
                                                num_or_size_splits=self.spatial_domain_sampled.shape[1],
                                                axis=1)
+        
+        
+        
 
-    def loss_fn(self, inputs, loss, functions):
+    def loss_fn(self, inputs, loss1, loss2, functions):
         """Compute the loss function based on inputs and functions.
 
         :param inputs: Input data for computing the loss.
@@ -84,12 +91,11 @@ class MeshSampler(SamplerBase):
                 outputs = functions["pde_fn"](outputs, *x, t, functions["extra_variables"])
             else:
                 outputs = functions["pde_fn"](outputs, *x, t)
-
-        loss = functions["loss_fn"](loss, outputs, keys=self.collection_points_names) + functions[
-            "loss_fn"
-        ](loss, outputs, u, keys=self.solution_names)
-
-        return loss, outputs
+        
+        loss1 = functions["loss_fn"](loss1, outputs, keys=self.collection_points_names)
+        loss2 = functions["loss_fn"](loss2, outputs, u, keys=self.solution_names)
+        loss2 = loss2* 0.5
+        return loss1, loss2, outputs
 
 
 class DiscreteMeshSampler(SamplerBase):

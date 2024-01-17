@@ -5,11 +5,15 @@ from pinnstf2 import utils
 import pandas as pd
 from .sampler_base import SamplerBase
 
+#L = 3e-4
+#U = 0.1
+#rho = 1e3
+#mu = 1e-3
+
 L = 3e-4
-U = 0.1
+U = 3e-4
 rho = 1e3
 mu = 1e-3
-
 
 class DirichletBoundaryCondition(SamplerBase):
     """Initialize Dirichlet boundary condition."""
@@ -76,7 +80,7 @@ class DirichletBoundaryCondition(SamplerBase):
         
         self.spatial_domain_sampled = []
 
-        filename = 'data/test_case_data/test_wall.csv'
+        filename = 'data/input_inverse/mouse_wall.csv'
         tmp_df = pd.read_csv(filename)
         tmp_x = tmp_df['Points_0'].to_numpy()
         tmp_y = tmp_df['Points_1'].to_numpy()
@@ -118,11 +122,6 @@ class DirichletBoundaryCondition(SamplerBase):
 
         tmp_time = tf.convert_to_tensor(tmp_time, dtype=tf.float32)
         self.time_domain_sampled = tmp_time
-
-        print(self.spatial_domain_sampled)
-        print(self.time_domain_sampled)
-        print(self.solution_sampled)
-
 
     def sample_mesh(self, num_sample, flatten_mesh):
         """Sample the mesh data for training. If idx_t is defined, only points on that time will be
@@ -175,7 +174,7 @@ class DirichletBoundaryCondition(SamplerBase):
 
         loss = functions["loss_fn"](loss, outputs, u, keys=self.solution_names)
 
-        loss = loss * 50.0
+        loss = loss
 
         return loss, outputs
 

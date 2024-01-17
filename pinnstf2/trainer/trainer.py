@@ -35,7 +35,7 @@ class Trainer:
         
         self.min_epochs = min_epochs
         self.max_epochs = max_epochs
-        self.enable_progress_bar = enable_progress_bar
+        self.enable_progress_bar = True
         self.check_val_every_n_epoch = check_val_every_n_epoch
         self.callback_metrics = {}
         self.current_epoch = 0
@@ -210,21 +210,18 @@ class Trainer:
         for epoch in range(self.current_epoch, self.max_epochs):
             try:
                 start_time=time.time()
-
                 self.train_loop(model, train_dataloader, epoch)
-
                 elapsed_time = time.time() - start_time
                 self.time_list.append(elapsed_time)
-
                 # Perform validation at specified intervals
                 if epoch % self.check_val_every_n_epoch == 0:
                     self.eval_loop(model, val_dataloader)
-
                 #save trained parameter
                 if epoch == self.max_epochs-1:
                     filename = str(epoch) + "_trained.h5"
                     self.save_train_data(filename, net)
             except KeyboardInterrupt:
+                print("check")
                 filename = str(epoch) + "_trained.h5"
                 self.save_train_data(filename, net)
                 raise
@@ -249,24 +246,38 @@ class Trainer:
             train_data, self.train_current_index = self.next_batch(train_dataloader,
                                                                    self.train_current_index,
                                                                    self.train_dataset_size)
-            loss, extra_variables = model.train_step(train_data)
+            loss, loss1, loss2, loss3, extra_variables, preds_test, preds = model.train_step(train_data)
             
         else:
             # If no batching is used, pass the entire dataloader to the train_step
-            loss, extra_variables = model.train_step(train_dataloader)
+            loss, loss1, loss2, loss3, extra_variables, preds_test, preds = model.train_step(train_dataloader)
 
         self.set_callback_metrics('train/loss', loss.numpy(), extra_variables)
         
+        e1 = tf.reduce_sum(tf.square(preds_test['e1']))
+        e2 = tf.reduce_sum(tf.square(preds_test['e2']))
+        e3 = tf.reduce_sum(tf.square(preds_test['e3']))
+        e4 = tf.reduce_sum(tf.square(preds_test['e4']))
+        e5 = tf.reduce_sum(tf.square(preds_test['e5']))
+
         if self.enable_progress_bar:
             self.pbar.update(1)
             description = self.callback_pbar(str(current_epoch) + ', train/loss', loss.numpy(), extra_variables)
-
             self.pbar.set_description(description)
             if current_epoch % 100 == 0:
                 f = open('train_loss_log.txt', 'a')
-                f.write(str(current_epoch) + ' ' + str(loss.numpy()))
+                #try:
+                f.write(str(current_epoch) + ' ' + str(loss.numpy()) + ', ' + 'l1:' + str(extra_variables["l1"].numpy()) + ' ,l2:' + str(extra_variables["l2"].numpy()))
+                #except:
+                #    f.write(str(current_epoch) + ' ' + str(loss.numpy()))
                 f.write('\n')
                 f.close()
+            if current_epoch % 100 == 0:
+                f2 = open('detail_loss_log.txt', 'a')
+                f2.write(str(current_epoch) + ' data_loss:' + str(loss2.numpy()) + ', ' + 'pde_loss:' + str(loss1.numpy()) + ' ,bd_loss:' + str(loss3.numpy())\
+                    + ' ,e1:' + str(e1.numpy()) + ' ,e2:' + str(e2.numpy()) + ' ,e3:' + str(e3.numpy()) + ' ,e4:' + str(e4.numpy()) + ' ,e5:' + str(e5.numpy()))
+                f2.write('\n')
+                f2.close()
             self.pbar.refresh() 
 
     

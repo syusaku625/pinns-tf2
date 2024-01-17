@@ -113,8 +113,40 @@ class PINNModule:
         loss = 0.0
         for loss_fn_name, data in batch.items():
             loss, preds = self.function_mapping[loss_fn_name](data, loss, self.functions)
-
         return loss, preds
+    
+    def model_step_test(
+        self,
+        batch: Dict[
+            str,
+            Union[
+                Tuple[tf.Tensor, tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]
+            ],
+        ],
+    ) -> Tuple[tf.Tensor, Dict[str, tf.Tensor]]:
+        """Perform a single model step on a batch of data.
+
+        :param batch: A batch of data (a tuple) containing the
+        input tensor of different conditions and data.
+
+        :return: A tuple containing (in order):
+            - A tensor of losses.
+            - A dictionary of predictions.
+        """
+        loss1 = 0.0
+        loss2 = 0.0
+        loss3 = 0.0
+        count = 0
+        for loss_fn_name, data in batch.items():
+            if count==0:
+                loss1, loss2, preds_test = self.function_mapping[loss_fn_name](data, loss1, loss2, self.functions)
+            if count==1:
+                loss3, preds = self.function_mapping[loss_fn_name](data, loss3, self.functions)
+            count+=1
+        try:
+            return loss1, loss2, loss3, preds_test, preds
+        except:
+            return loss1, loss2, loss3, preds_test
 
     def train_step(self, batch):
         """
@@ -123,15 +155,14 @@ class PINNModule:
         :param batch: The input batch of data for training.
         :return: The calculated loss and any extra variables to be used outside.
         """
-
         # Use GradientTape for automatic differentiation - to record operations for the forward pass
         with tf.GradientTape() as tape:
-            loss, pred = self.model_step(batch)
-
+            #loss, pred = self.model_step(batch)
+            loss1, loss2, loss3, preds_test, preds = self.model_step_test(batch)    
+            loss = loss1 + loss2 + loss3
             # If automatic mixed precision (amp) is enabled, scale the loss to prevent underflow
             if self.amp:
                 scaled_loss = self.opt.get_scaled_loss(loss)
-
         # If amp is enabled, compute gradients w.r.t the scaled loss
         if self.amp:
             scaled_grad = tape.gradient(scaled_loss, self.trainable_variables)
@@ -141,8 +172,8 @@ class PINNModule:
 
         # Apply the calculated gradients to the model's trainable parameters
         self.opt.apply_gradients(zip(gradients, self.trainable_variables))   
-        
-        return loss, self.extra_variables
+
+        return loss, loss1, loss2, loss3, self.extra_variables, preds_test, preds
 
     def eval_step(
         self, batch
@@ -155,7 +186,9 @@ class PINNModule:
 
         x, t, u = list(batch.values())[0]
                 
-        loss, preds = self.model_step(batch)
+        #loss, preds = self.model_step(batch)
+        loss1, loss2, loss3, preds = self.model_step_test(batch)   
+        loss = loss1 + loss2 + loss3
 
         if self.rk:
             error_dict = {
