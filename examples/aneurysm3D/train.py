@@ -17,7 +17,7 @@ from omegaconf import DictConfig
 #mu = 1e-3
 
 L = 3e-4
-U = 0.1
+U = 3e-4
 rho = 1e3
 mu = 1e-3
 
@@ -33,8 +33,8 @@ def read_data_fn(root_path):
     #time_file = root_path + 'input_inverse' + '/' + 'Time_inverse.csv'
     #coordinate_file = root_path + 'input_inverse' + '/' + 'coordinate_inverse.csv'
 
-    time_file = root_path + 'test_case_data' + '/' + 'time.csv'
-    coordinate_file = root_path + 'test_case_data' + '/' + 'coordinate.csv'
+    time_file = root_path + 'mouse_mesh_version2/Time_interpolated.csv'
+    coordinate_file = root_path + 'mouse_mesh_version2/coordinate.csv'
 
     time = pd.read_csv(time_file)
     time = time['Time'].to_numpy()
@@ -57,20 +57,20 @@ def read_data_fn(root_path):
     p = np.array([])
     c = np.array([])
 
-    for i in range (0, 40):
+    for i in range (0, 81):
         #filename = root_path + 'input_inverse/' + 'contrast' + str(i) + '.csv'
-        filename = root_path + 'test_case_data/velocity_data/' + 'velocity_' + str(i) + '.csv'
+        filename = root_path + 'mouse_mesh_version2/contrast_interpolated_' + str(i) + '.csv'
         tmp_df = pd.read_csv(filename)
-        tmp_u = tmp_df['Velocity:0'].to_numpy()
-        tmp_v = tmp_df['Velocity:1'].to_numpy()
-        tmp_w = tmp_df['Velocity:2'].to_numpy()
-        tmp_p = tmp_df['Pressure'].to_numpy()
-        tmp_c = tmp_df['PassiveScalar'].to_numpy()
-        #tmp_c = tmp_df['concentration[-]'].to_numpy()
-        #tmp_u = np.zeros(tmp_c.shape)
-        #tmp_v = np.zeros(tmp_c.shape)
-        #tmp_w = np.zeros(tmp_c.shape)
-        #tmp_p = np.zeros(tmp_c.shape)
+        #tmp_u = tmp_df['Velocity:0'].to_numpy()
+        #tmp_v = tmp_df['Velocity:1'].to_numpy()
+        #tmp_w = tmp_df['Velocity:2'].to_numpy()
+        #tmp_p = tmp_df['Pressure'].to_numpy()
+        #tmp_c = tmp_df['PassiveScalar'].to_numpy()
+        tmp_c = tmp_df['concentration[-]'].to_numpy()
+        tmp_u = np.zeros(tmp_c.shape)
+        tmp_v = np.zeros(tmp_c.shape)
+        tmp_w = np.zeros(tmp_c.shape)
+        tmp_p = np.zeros(tmp_c.shape)
         u = np.append(u, tmp_u)
         v = np.append(v, tmp_v)
         w = np.append(w, tmp_w)
@@ -116,7 +116,8 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
            x: tf.Tensor,
            y: tf.Tensor,
            z: tf.Tensor,
-           t: tf.Tensor):   
+           t: tf.Tensor,
+           extra_variables: Dict[str, tf.Tensor]):   
     """Define the partial differential equations (PDEs).
 
     :param outputs: Dictionary containing the network outputs for different variables.
@@ -141,8 +142,8 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
     Y_yy = pinnstf2.utils.fwd_gradient(Y_y, y)
     Y_zz = pinnstf2.utils.fwd_gradient(Y_z, z)
 
-    Pec = rho * L * U / mu
-    Rey = rho * L * U / mu
+    #Pec = rho * L * U / mu
+    #Rey = rho * L * U / mu
 
     c = Y[:,0:1]
     u = Y[:,1:2]
@@ -188,10 +189,10 @@ def pde_fn(outputs: Dict[str, tf.Tensor],
     v_zz = Y_zz[:,2:3]
     w_zz = Y_zz[:,3:4]
 
-    outputs["e1"] = c_t + (u * c_x + v * c_y + w * c_z) - (1.0 / Pec) * (c_xx + c_yy + c_zz)
-    outputs["e2"] = u_t + (u * u_x + v * u_y + w * u_z) + p_x - (1.0 / Rey) * (u_xx + u_yy + u_zz)
-    outputs["e3"] = v_t + (u * v_x + v * v_y + w * v_z) + p_y - (1.0 / Rey) * (v_xx + v_yy + v_zz)
-    outputs["e4"] = w_t + (u * w_x + v * w_y + w * w_z) + p_z - (1.0 / Rey) * (w_xx + w_yy + w_zz)
+    outputs["e1"] = c_t + (u * c_x + v * c_y + w * c_z) - (1.0 / extra_variables["l1"]) * (c_xx + c_yy + c_zz)
+    outputs["e2"] = u_t + (u * u_x + v * u_y + w * u_z) + p_x - (1.0 / extra_variables["l2"]) * (u_xx + u_yy + u_zz)
+    outputs["e3"] = v_t + (u * v_x + v * v_y + w * v_z) + p_y - (1.0 / extra_variables["l2"]) * (v_xx + v_yy + v_zz)
+    outputs["e4"] = w_t + (u * w_x + v * w_y + w * w_z) + p_z - (1.0 / extra_variables["l2"]) * (w_xx + w_yy + w_zz)
     outputs["e5"] = u_x + v_y + w_z
 
     return outputs

@@ -94,7 +94,7 @@ class MeshSampler(SamplerBase):
         
         loss1 = functions["loss_fn"](loss1, outputs, keys=self.collection_points_names)
         loss2 = functions["loss_fn"](loss2, outputs, u, keys=self.solution_names)
-        loss2 = loss2* 0.5
+        loss2 = loss2 * 0.5
         return loss1, loss2, outputs
 
 

@@ -28,6 +28,7 @@ train_datasets:
         - u
         - v
         - w
+        - c
 
 val_dataset:
   - mesh_sampler:
@@ -40,7 +41,7 @@ test_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 39
+      idx_t: 10
       solution:
         - c
 
@@ -48,7 +49,7 @@ pred_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 39
+      idx_t: 10
       solution:
         - c
         - u
@@ -68,11 +69,14 @@ net:
 
 model:
   loss_fn: mse
+  extra_variables:
+    l1: 1.0
+    l2: 1.0
   
 
 trainer:
-  max_epochs: 300000
-  check_val_every_n_epoch: 100
+  max_epochs: 100000
+  check_val_every_n_epoch: 1000
 
 train: true
 test: false
@@ -85,6 +89,9 @@ optimized_metric:
     - v
     - w
     - p
+  extra_variables:
+    - l1
+    - l2
 
 plotting:
   _target_: pinnstf2.utils.plot_navier_stokes

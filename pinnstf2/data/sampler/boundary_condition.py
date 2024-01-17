@@ -80,7 +80,7 @@ class DirichletBoundaryCondition(SamplerBase):
         
         self.spatial_domain_sampled = []
 
-        filename = 'data/input_inverse/mouse_wall.csv'
+        filename = 'data/mouse_mesh_version2/non_slip_x.csv'
         tmp_df = pd.read_csv(filename)
         tmp_x = tmp_df['Points_0'].to_numpy()
         tmp_y = tmp_df['Points_1'].to_numpy()
@@ -112,13 +112,16 @@ class DirichletBoundaryCondition(SamplerBase):
         tmp_u = np.zeros(tmp_time.shape)
         tmp_v = np.zeros(tmp_time.shape)
         tmp_w = np.zeros(tmp_time.shape)
+        tmp_c = np.zeros(tmp_time.shape)
         tmp_u = tf.convert_to_tensor(tmp_u, dtype=tf.float32)
         tmp_v = tf.convert_to_tensor(tmp_v, dtype=tf.float32)
         tmp_w = tf.convert_to_tensor(tmp_w, dtype=tf.float32)
+        tmp_c = tf.convert_to_tensor(tmp_w, dtype=tf.float32)
 
         self.solution_sampled.append(tmp_u)
         self.solution_sampled.append(tmp_v)
         self.solution_sampled.append(tmp_w)
+        self.solution_sampled.append(tmp_c)
 
         tmp_time = tf.convert_to_tensor(tmp_time, dtype=tf.float32)
         self.time_domain_sampled = tmp_time
