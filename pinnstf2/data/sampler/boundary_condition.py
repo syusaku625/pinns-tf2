@@ -79,6 +79,7 @@ class DirichletBoundaryCondition(SamplerBase):
         
         
         self.spatial_domain_sampled = []
+        self.solution_sampled = []
 
         filename = 'data/mouse_mesh_version2/non_slip_x.csv'
         tmp_df = pd.read_csv(filename)
@@ -106,8 +107,6 @@ class DirichletBoundaryCondition(SamplerBase):
 
         time_bound = np.vstack([time_upper_bound, time_lower_bound])
         tmp_time = time_bound.reshape(-1,1)
-
-        self.solution_sampled = []
 
         tmp_u = np.zeros(tmp_time.shape)
         tmp_v = np.zeros(tmp_time.shape)
@@ -177,7 +176,7 @@ class DirichletBoundaryCondition(SamplerBase):
 
         loss = functions["loss_fn"](loss, outputs, u, keys=self.solution_names)
 
-        loss = loss
+        loss = loss * 100.0
 
         return loss, outputs
 

@@ -136,17 +136,21 @@ class PINNModule:
         loss1 = 0.0
         loss2 = 0.0
         loss3 = 0.0
+        loss4 = 0.0
         count = 0
         for loss_fn_name, data in batch.items():
+            #print(loss_fn_name)
             if count==0:
                 loss1, loss2, preds_test = self.function_mapping[loss_fn_name](data, loss1, loss2, self.functions)
             if count==1:
                 loss3, preds = self.function_mapping[loss_fn_name](data, loss3, self.functions)
+            if count==2:
+                loss4, preds = self.function_mapping[loss_fn_name](data, loss4, self.functions)
             count+=1
         try:
-            return loss1, loss2, loss3, preds_test, preds
+            return loss1, loss2, loss3, loss4, preds_test, preds
         except:
-            return loss1, loss2, loss3, preds_test
+            return loss1, loss2, loss3, loss4, preds_test
 
     def train_step(self, batch):
         """
@@ -158,8 +162,8 @@ class PINNModule:
         # Use GradientTape for automatic differentiation - to record operations for the forward pass
         with tf.GradientTape() as tape:
             #loss, pred = self.model_step(batch)
-            loss1, loss2, loss3, preds_test, preds = self.model_step_test(batch)    
-            loss = loss1 + loss2 + loss3
+            loss1, loss2, loss3, loss4, preds_test, preds = self.model_step_test(batch)    
+            loss = loss1 + loss2 + loss3 + loss4
             # If automatic mixed precision (amp) is enabled, scale the loss to prevent underflow
             if self.amp:
                 scaled_loss = self.opt.get_scaled_loss(loss)
@@ -173,7 +177,7 @@ class PINNModule:
         # Apply the calculated gradients to the model's trainable parameters
         self.opt.apply_gradients(zip(gradients, self.trainable_variables))   
 
-        return loss, loss1, loss2, loss3, self.extra_variables, preds_test, preds
+        return loss, loss1, loss2, loss3, loss4, self.extra_variables, preds_test, preds
 
     def eval_step(
         self, batch
@@ -187,8 +191,8 @@ class PINNModule:
         x, t, u = list(batch.values())[0]
                 
         #loss, preds = self.model_step(batch)
-        loss1, loss2, loss3, preds = self.model_step_test(batch)   
-        loss = loss1 + loss2 + loss3
+        loss1, loss2, loss3, loss4, preds = self.model_step_test(batch)   
+        loss = loss1 + loss2 + loss3 + loss4
 
         if self.rk:
             error_dict = {

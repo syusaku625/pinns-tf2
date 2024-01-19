@@ -168,24 +168,24 @@ class NetHFM(object):
         self.gammas = []
 
         #if use trained data comment out!
-        #filename = "97960_trained.h5"
-        #read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
-        #for i in range(0, 11):
-        #    self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
-        #    self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
-        #    self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
+        filename = "16082_trained.h5"
+        read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
+        for i in range(0, 11):
+            self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
+            self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
+            self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
         
         #if not use trained data comment out!
-        for l in range(0,self.num_layers-1):
-            in_dim = layers[l]
-            out_dim = layers[l+1]
-            W = np.random.normal(size=[in_dim, out_dim])
-            b = np.zeros([1, out_dim])
-            g = np.ones([1, out_dim])
-            # tensorflow variables
-            self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
-            self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
-            self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
+        #for l in range(0,self.num_layers-1):
+        #    in_dim = layers[l]
+        #    out_dim = layers[l+1]
+        #    W = np.random.normal(size=[in_dim, out_dim])
+        #    b = np.zeros([1, out_dim])
+        #    g = np.ones([1, out_dim])
+        #    # tensorflow variables
+        #    self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
+        #    self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
+        #    self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
 
         self.trainable_variables.extend(self.weights)
         self.trainable_variables.extend(self.biases)

@@ -246,14 +246,14 @@ class Trainer:
             train_data, self.train_current_index = self.next_batch(train_dataloader,
                                                                    self.train_current_index,
                                                                    self.train_dataset_size)
-            loss, loss1, loss2, loss3, extra_variables, preds_test, preds = model.train_step(train_data)
+            loss, loss1, loss2, loss3, loss4, extra_variables, preds_test, preds = model.train_step(train_data)
             
         else:
             # If no batching is used, pass the entire dataloader to the train_step
-            loss, loss1, loss2, loss3, extra_variables, preds_test, preds = model.train_step(train_dataloader)
+            loss, loss1, loss2, loss3, loss4, extra_variables, preds_test, preds = model.train_step(train_dataloader)
 
         self.set_callback_metrics('train/loss', loss.numpy(), extra_variables)
-        
+
         e1 = tf.reduce_sum(tf.square(preds_test['e1']))
         e2 = tf.reduce_sum(tf.square(preds_test['e2']))
         e3 = tf.reduce_sum(tf.square(preds_test['e3']))
@@ -275,7 +275,7 @@ class Trainer:
             if current_epoch % 100 == 0:
                 f2 = open('detail_loss_log.txt', 'a')
                 f2.write(str(current_epoch) + ' data_loss:' + str(loss2.numpy()) + ', ' + 'pde_loss:' + str(loss1.numpy()) + ' ,bd_loss:' + str(loss3.numpy())\
-                    + ' ,e1:' + str(e1.numpy()) + ' ,e2:' + str(e2.numpy()) + ' ,e3:' + str(e3.numpy()) + ' ,e4:' + str(e4.numpy()) + ' ,e5:' + str(e5.numpy()))
+                    + ' ,initial_loss:' + str(loss4.numpy()) + ' ,e1:' + str(e1.numpy()) + ' ,e2:' + str(e2.numpy()) + ' ,e3:' + str(e3.numpy()) + ' ,e4:' + str(e4.numpy()) + ' ,e5:' + str(e5.numpy()))
                 f2.write('\n')
                 f2.close()
             self.pbar.refresh() 
