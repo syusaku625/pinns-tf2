@@ -38,6 +38,7 @@ class DirichletBoundaryCondition(SamplerBase):
         :param boundary_fun: A function can apply on boundary data.
         :param discrete: It is a boolean that is true when problem is discrete.
         """
+        
 
         super().__init__(dtype)
 
@@ -81,14 +82,13 @@ class DirichletBoundaryCondition(SamplerBase):
         self.spatial_domain_sampled = []
         self.solution_sampled = []
 
-        filename = 'data/mouse_mesh_version2/non_slip_x.csv'
+        filename = 'data/mouse29meshv3/non_slip_x.csv'
         tmp_df = pd.read_csv(filename)
+        
         tmp_x = tmp_df['Points_0'].to_numpy()
         tmp_y = tmp_df['Points_1'].to_numpy()
         tmp_z = tmp_df['Points_2'].to_numpy()
-        tmp_x = np.repeat(tmp_x, 2)
-        tmp_y = np.repeat(tmp_y, 2)
-        tmp_z = np.repeat(tmp_z, 2)
+        numofpoint = len(tmp_x)
         tmp_x = tmp_x.reshape(-1,1)
         tmp_y = tmp_y.reshape(-1,1)
         tmp_z = tmp_z.reshape(-1,1)
@@ -105,7 +105,7 @@ class DirichletBoundaryCondition(SamplerBase):
         self.spatial_domain_sampled.append(tmp_y)
         self.spatial_domain_sampled.append(tmp_z)
 
-        time_bound = np.vstack([time_upper_bound, time_lower_bound])
+        time_bound = np.repeat(time_lower_bound, len(self.spatial_domain_sampled[0]), axis=0)
         tmp_time = time_bound.reshape(-1,1)
 
         tmp_u = np.zeros(tmp_time.shape)
@@ -134,29 +134,6 @@ class DirichletBoundaryCondition(SamplerBase):
         :return: Sampled spatial, time, and solution data.
         """
 
-        #flatten_mesh = self.concatenate_solutions(flatten_mesh)
-#
-        #if self.discrete:
-        #    t_points = len(flatten_mesh[0]) // 2
-        #    flatten_mesh = [
-        #        np.vstack(
-        #            (
-        #                flatten_mesh_[self.idx_t : self.idx_t + 1, :],
-        #                flatten_mesh_[self.idx_t + t_points : self.idx_t + t_points + 1, :],
-        #            )
-        #        )
-        #        for flatten_mesh_ in flatten_mesh
-        #    ]
-#
-        #if num_sample is None:
-        #    return self.convert_to_tensor(flatten_mesh)
-        #else:
-        #    idx = np.random.choice(range(flatten_mesh[0].shape[0]), num_sample, replace=False)
-        #    return self.convert_to_tensor(
-        #        (flatten_mesh[0][idx, :], flatten_mesh[1][idx, :], flatten_mesh[2][idx, :])
-        #    )
-
-
     def loss_fn(self, inputs, loss, functions):
         """Compute the loss function based on inputs and functions.
 
@@ -176,7 +153,7 @@ class DirichletBoundaryCondition(SamplerBase):
 
         loss = functions["loss_fn"](loss, outputs, u, keys=self.solution_names)
 
-        loss = loss * 100.0
+        loss = loss * 10000.0
 
         return loss, outputs
 
