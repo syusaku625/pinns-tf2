@@ -51,7 +51,9 @@ class DirichletBoundaryCondition(SamplerBase):
         spatial_lower_bound, time_lower_bound, solution_lower_bound = mesh.on_lower_boundary(
             self.solution_names
         )
-        #spatial_bound = np.vstack([spatial_upper_bound, spatial_lower_bound])
+
+        spatial_bound = np.vstack([spatial_upper_bound, spatial_lower_bound])
+        
         #time_bound = np.vstack([time_upper_bound, time_lower_bound])
         #solution_bound = {}
         #for solution_name in self.solution_names:
@@ -59,8 +61,8 @@ class DirichletBoundaryCondition(SamplerBase):
         #        [solution_upper_bound[solution_name], solution_lower_bound[solution_name]]
         #    )
 #
-        if boundary_fun:
-            solution_bound = boundary_fun(time_bound)
+        #if boundary_fun:
+        #    solution_bound = boundary_fun(time_bound)
 #
         self.idx_t = idx_t
 #
@@ -82,13 +84,48 @@ class DirichletBoundaryCondition(SamplerBase):
         self.spatial_domain_sampled = []
         self.solution_sampled = []
 
-        filename = 'data/mouse29meshv3/non_slip_x.csv'
+        filename = 'data/mouse29meshv2/non_slip_x.csv'
+        time_filename = 'data/mouse29meshv2/Time_interpolated.csv'
+        inlet_node_file = 'data/mouse29meshv2/mouse29_inlet_coordinate.csv'
+        area_value = 7.29831e-08
+        injecttion_temporal_number = 11
+        flow_rate = 0.25 #micro l /min
+        flow_rate = flow_rate * 1e-6 # l/min
+        flow_rate = flow_rate * 1e-3 #m3/min
+        flow_rate = flow_rate / 60.0 #m3/s
+        inlet_velocity = flow_rate / area_value
+        inlet_velocity = inlet_velocity / U
+
         tmp_df = pd.read_csv(filename)
-        
+        time_df = pd.read_csv(time_filename)
+        inlet_node_df = pd.read_csv(inlet_node_file)
+
+        tmp_time = time_df['Time'].to_numpy()
         tmp_x = tmp_df['Points_0'].to_numpy()
         tmp_y = tmp_df['Points_1'].to_numpy()
         tmp_z = tmp_df['Points_2'].to_numpy()
-        numofpoint = len(tmp_x)
+
+        numofwall = len(tmp_x)
+
+        inlet_x = inlet_node_df['Points_0'].to_numpy()
+        inlet_y = inlet_node_df['Points_1'].to_numpy()
+        inlet_z = inlet_node_df['Points_2'].to_numpy()
+
+        numofinlet = len(inlet_x)
+
+        tmp_x = np.hstack([tmp_x, inlet_x])
+        tmp_y = np.hstack([tmp_y, inlet_y])
+        tmp_z = np.hstack([tmp_z, inlet_z])
+
+        numoftime = len(tmp_time)
+        numofnode = len(tmp_x)
+
+        tmp_time = tmp_time.reshape(-1,1)
+        tmp_time = np.repeat(tmp_time, numofnode, axis=0)
+
+        tmp_x = np.repeat(tmp_x, numoftime)
+        tmp_y = np.repeat(tmp_y, numoftime)
+        tmp_z = np.repeat(tmp_z, numoftime)
         tmp_x = tmp_x.reshape(-1,1)
         tmp_y = tmp_y.reshape(-1,1)
         tmp_z = tmp_z.reshape(-1,1)
@@ -97,6 +134,7 @@ class DirichletBoundaryCondition(SamplerBase):
         tmp_y = tmp_y / L
         tmp_z = tmp_z / L
 
+        tmp_time = tf.convert_to_tensor(tmp_time, dtype=tf.float32)
         tmp_x = tf.convert_to_tensor(tmp_x, dtype=tf.float32)
         tmp_y = tf.convert_to_tensor(tmp_y, dtype=tf.float32)
         tmp_z = tf.convert_to_tensor(tmp_z, dtype=tf.float32)
@@ -105,22 +143,22 @@ class DirichletBoundaryCondition(SamplerBase):
         self.spatial_domain_sampled.append(tmp_y)
         self.spatial_domain_sampled.append(tmp_z)
 
-        time_bound = np.repeat(time_lower_bound, len(self.spatial_domain_sampled[0]), axis=0)
-        tmp_time = time_bound.reshape(-1,1)
-
         tmp_u = np.zeros(tmp_time.shape)
         tmp_v = np.zeros(tmp_time.shape)
         tmp_w = np.zeros(tmp_time.shape)
-        tmp_c = np.zeros(tmp_time.shape)
+
+        #inpose inlet velocity
+        for i in range(injecttion_temporal_number):
+            for j in range(numofinlet):
+                tmp_u[i*numofnode+numofwall+j] = -inlet_velocity
+
         tmp_u = tf.convert_to_tensor(tmp_u, dtype=tf.float32)
         tmp_v = tf.convert_to_tensor(tmp_v, dtype=tf.float32)
         tmp_w = tf.convert_to_tensor(tmp_w, dtype=tf.float32)
-        tmp_c = tf.convert_to_tensor(tmp_w, dtype=tf.float32)
 
         self.solution_sampled.append(tmp_u)
         self.solution_sampled.append(tmp_v)
         self.solution_sampled.append(tmp_w)
-        self.solution_sampled.append(tmp_c)
 
         tmp_time = tf.convert_to_tensor(tmp_time, dtype=tf.float32)
         self.time_domain_sampled = tmp_time
@@ -153,7 +191,7 @@ class DirichletBoundaryCondition(SamplerBase):
 
         loss = functions["loss_fn"](loss, outputs, u, keys=self.solution_names)
 
-        loss = loss * 10000.0
+        loss = loss * 100.0
 
         return loss, outputs
 
