@@ -2,7 +2,9 @@ from typing import List, Dict, Callable, Any, Tuple, Union
 
 import tensorflow as tf
 import sys, os, logging, time
+import tensorflow_probability as tfp
 
+import numpy as np
 from pinnstf2.utils import fwd_gradient, gradient
 from pinnstf2.utils import (
     fix_extra_variables,
@@ -12,11 +14,17 @@ from pinnstf2.utils import (
 )
 
 class PINNModule:
+    loss_data_before = 0.0
+    loss_pde_before = 0.0
+    loss_data_difference = 1.0
+    loss_pde_difference = 1.0
     def __init__(
         self,
         net,
         pde_fn: Callable[[Any, ...], tf.Tensor],
-        optimizer: tf.keras.optimizers.Adam = tf.keras.optimizers.Adam,
+        pde_fn_cp: Callable[[Any, ...], tf.Tensor],
+        optimizer: tf.keras.optimizers.Nadam = tf.keras.optimizers.Nadam,
+        #optimizer: tfp.optimizer.lbfgs_minimize = tfp.optimizer.lbfgs_minimize,
         loss_fn: str = "sse",
         extra_variables: Dict[str, Any] = None,
         output_fn: Callable[[Any, ...], tf.Tensor] = None,
@@ -26,6 +34,7 @@ class PINNModule:
         dtype: str = 'float32'
     ) -> None:
         """
+        #optimizer: tfp.optimizer.lbfgs_minimize = tfp.optimizer.lbfgs_minimize,
         Initialize a `PINNModule`.
 
         :param net: The neural network model to be used for approximating solutions.
@@ -53,6 +62,7 @@ class PINNModule:
         self.output_fn = output_fn
         self.rk = runge_kutta
         self.pde_fn = pde_fn
+        self.pde_fn_cp = pde_fn_cp
         self.opt = optimizer()
         self.amp = amp
         if self.amp:
@@ -75,6 +85,7 @@ class PINNModule:
             "runge_kutta": self.rk,
             "forward": self.forward,
             "pde_fn": self.pde_fn,
+            "pde_fn_cp": self.pde_fn_cp,
             "output_fn": self.output_fn,
             "extra_variables": self.extra_variables,
             "loss_fn": self.loss_fn,
@@ -123,6 +134,7 @@ class PINNModule:
                 Tuple[tf.Tensor, tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]
             ],
         ],
+        adaptive_weight
     ) -> Tuple[tf.Tensor, Dict[str, tf.Tensor]]:
         """Perform a single model step on a batch of data.
 
@@ -133,26 +145,94 @@ class PINNModule:
             - A tensor of losses.
             - A dictionary of predictions.
         """
-        loss1 = 0.0
-        loss2 = 0.0
-        loss3 = 0.0
-        loss4 = 0.0
+        loss1 = 0.0 ## data
+        loss2 = 0.0 ## collection
+        loss3 = 0.0 ## non-slip
+        loss4 = 0.0 ## outlet
+        loss5 = 0.0 ## inlet
+        loss6 = 0.0 ## choroid plexus
         count = 0
         for loss_fn_name, data in batch.items():
-            #print(loss_fn_name)
-            if count==0:
-                loss1, loss2, preds_test = self.function_mapping[loss_fn_name](data, loss1, loss2, self.functions)
-            if count==1:
+            if count==0: ##collection and data loss
+                loss1, loss2, preds_test = self.function_mapping[loss_fn_name](data, adaptive_weight, loss1, loss2, self.functions)
+            if count==1: ##non_slip_boundary
                 loss3, preds = self.function_mapping[loss_fn_name](data, loss3, self.functions)
-            if count==2:
+            if count==2: ##pressure_boundary_condition
                 loss4, preds = self.function_mapping[loss_fn_name](data, loss4, self.functions)
+            if count==3: ##inlet_boundary_condition
+                loss5, preds = self.function_mapping[loss_fn_name](data, loss4, self.functions)
+            if count==4: ##choroid_plexus_boundary_condition
+                loss6, preds_test = self.function_mapping[loss_fn_name](data, loss6, self.functions)
             count+=1
-        try:
-            return loss1, loss2, loss3, loss4, preds_test, preds
-        except:
-            return loss1, loss2, loss3, loss4, preds_test
+        
+        return loss1, loss2, loss3, loss4, loss5, preds_test
+    
+    def model_step_test_eval(
+        self,
+        batch: Dict[
+            str,
+            Union[
+                Tuple[tf.Tensor, tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]
+            ],
+        ],
+    ) -> Tuple[tf.Tensor, Dict[str, tf.Tensor]]:
+        """Perform a single model step on a batch of data.
 
-    def train_step(self, batch):
+        :param batch: A batch of data (a tuple) containing the
+        input tensor of different conditions and data.
+
+        :return: A tuple containing (in order):
+            - A tensor of losses.
+            - A dictionary of predictions.
+        """
+        loss1 = 0.0 ## data
+        loss2 = 0.0 ## collection
+        loss3 = 0.0 ## non-slip
+        loss4 = 0.0 ## outlet
+        loss5 = 0.0 ## inlet
+        loss6 = 0.0 ## choroid plexus
+        adaptive_weight = 1.0
+        count = 0
+        for loss_fn_name, data in batch.items():
+            try:
+                if count==0: ##collection and data loss
+                    loss1, loss2, preds = self.function_mapping[loss_fn_name](data, adaptive_weight, loss1, loss2, self.functions)
+                if count==1: ##non_slip_and_inlet_boundary
+                    loss3, preds = self.function_mapping[loss_fn_name](data, loss3, self.functions)
+                if count==2: ##pressure_boundary_condition
+                    loss4, preds = self.function_mapping[loss_fn_name](data, loss4, self.functions)
+                if count==3: ##inlet_boundary_condition
+                    loss5, preds = self.function_mapping[loss_fn_name](data, loss4, self.functions)
+                if count==4: ##choroid_plexus_boundary_condition
+                    loss6, preds = self.function_mapping[loss_fn_name](data, loss6, self.functions)
+            except:
+                loss6, preds = self.function_mapping[loss_fn_name](data, loss6, self.functions)
+            count+=1
+            return loss1, loss2, loss3, loss4, loss5, preds
+    
+    def boundary_input_return(
+        self,
+        batch: Dict[
+            str,
+            Union[
+                Tuple[tf.Tensor, tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]
+            ],
+        ],
+    ) -> Tuple[tf.Tensor, Dict[str, tf.Tensor]]:
+        count=0
+        for loss_fn_name, data in batch.items():
+            print(loss_fn_name)
+            if count==0:
+                data_boundary = data
+            count+=1
+        return data_boundary
+    
+    def give_boundary_data(self, batch):
+        with tf.GradientTape() as tape:
+            data_boundary = self.boundary_input_return(batch)
+            return data_boundary
+
+    def train_step(self, batch, adaptive_weight):
         """
         Performs a single training step, including forward and backward passes.
     
@@ -162,8 +242,8 @@ class PINNModule:
         # Use GradientTape for automatic differentiation - to record operations for the forward pass
         with tf.GradientTape() as tape:
             #loss, pred = self.model_step(batch)
-            loss1, loss2, loss3, loss4, preds_test, preds = self.model_step_test(batch)    
-            loss = loss1 + loss2 + loss3 + loss4
+            loss1, loss2, loss3, loss4, loss5, preds = self.model_step_test(batch, adaptive_weight)    
+            loss = loss1 + loss2 + loss3 + loss4 + loss5
             # If automatic mixed precision (amp) is enabled, scale the loss to prevent underflow
             if self.amp:
                 scaled_loss = self.opt.get_scaled_loss(loss)
@@ -177,7 +257,7 @@ class PINNModule:
         # Apply the calculated gradients to the model's trainable parameters
         self.opt.apply_gradients(zip(gradients, self.trainable_variables))   
 
-        return loss, loss1, loss2, loss3, loss4, self.extra_variables, preds_test, preds
+        return loss, loss1, loss2, loss3, loss4, loss5, self.extra_variables,preds
 
     def eval_step(
         self, batch
@@ -191,24 +271,25 @@ class PINNModule:
         x, t, u = list(batch.values())[0]
                 
         #loss, preds = self.model_step(batch)
-        loss1, loss2, loss3, loss4, preds = self.model_step_test(batch)   
-        loss = loss1 + loss2 + loss3 + loss4
+        loss1, loss2, loss3, loss4, loss5, preds = self.model_step_test_eval(batch)   
+        loss = loss1 + loss2 + loss3 + loss4 + loss5
 
-        if self.rk:
-            error_dict = {
-                solution_name: relative_l2_error(
-                    preds[solution_name][:, -1][:, None], u[solution_name]
-                )
-                for solution_name in self.val_solution_names
-            }
-
-        else:
-            error_dict = {
-                solution_name: relative_l2_error(preds[solution_name], u[solution_name])
-                for solution_name in self.val_solution_names
-            }
-                
-        return loss, error_dict, preds
+        try:
+            if self.rk:
+                error_dict = {
+                    solution_name: relative_l2_error(
+                        preds[solution_name][:, -1][:, None], u[solution_name]
+                    )
+                    for solution_name in self.val_solution_names
+                }
+            else:
+                error_dict = {
+                    solution_name: relative_l2_error(preds[solution_name], u[solution_name])
+                    for solution_name in self.val_solution_names
+                }    
+            return loss, error_dict, preds
+        except:
+            return loss, preds
    
     def validation_step(self, batch):
         """Perform a single validation step on a batch of data from the validation set.
@@ -227,7 +308,7 @@ class PINNModule:
         :param batch: A batch of data (a dict).
         :param batch_idx: The index of the current batch.
         """
-
+        
         loss, error, _ = self.eval_step(batch)
 
         return loss, error
@@ -238,8 +319,11 @@ class PINNModule:
         :param batch: A batch of data (a dict).
         :param batch_idx: The index of the current batch.
         """
+        try:
+            _, _, preds = self.eval_step(batch)
 
-        _, _, preds = self.eval_step(batch)
-
-        return preds
+            return preds
+        except:
+            _, preds = self.eval_step(batch)
+            return preds
                 

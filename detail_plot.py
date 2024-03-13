@@ -1,66 +1,83 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import scienceplots
 
-# ファイルのパス
-file_path = 'detail_loss_log.txt'  # ファイルの実際のパスに変更してください
+plt.style.use(['science','ieee'])
 
-# パラメータのリスト
-params = [[] for _ in range(9)]
+# テキストファイルからデータを読み込む
+with open("detail_loss_log.txt", "r") as file:
+    lines = file.readlines()
 
-# ファイルを読み込んで各パラメータを抽出
-with open(file_path, 'r') as file:
-    for line in file:
-        values = line.split(',')  # カンマで区切られていると仮定
-        for i in range(9):
-            if i==0:
-                values[i] = values[i].split(' ')[1].replace('data_loss:','')
-            elif i==1:
-                values[i] = values[i].replace(' pde_loss:','')
-            elif i==2:
-                values[i] = values[i].replace('bd_loss:','')
-            elif i==3:
-                values[i] = values[i].replace('initial_loss:','')
-            elif i==4:
-                values[i] = values[i].replace('e1:','')
-            elif i==5:
-                values[i] = values[i].replace('e2:','')
-            elif i==6:
-                values[i] = values[i].replace('e3:','')
-            elif i==7:
-                values[i] = values[i].replace('e4:','')
-            elif i==8:
-                values[i] = values[i].replace('e5:','')
-            params[i].append(float(values[i]))
+# 各パラメータのリストを初期化
+parameters = [[] for _ in range(10)]
 
-#start_index = 3774  # インデックスは0から始まるため、3700番目は3699となります
-#params[0][3774:], params[1][3774:] = params[1][3774:], params[0][3774:]
+# タイトルのリスト
+titles = [
+    "data_loss",
+    "pde_loss",
+    "non-slip_loss",
+    "outlet_loss",
+    "inlet_loss",
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+]
 
-# サブプロットを作成
-fig, axs = plt.subplots(3, 3, figsize=(12, 8))
-fig.suptitle('Parameters Plot')
+# 各行を処理してパラメータを取得
+for i, line in enumerate(lines):
+    parts = line.split()
+    for j, value in enumerate(parts):
+        if j==0:
+            continue
+        elif j==1:
+            value = value.replace('data_loss:','')
+            value = value.replace(',','')
+            parameters[j-1].append(float(value))
+        elif j==2:
+            value = value.replace('pde_loss:','')
+            parameters[j-1].append(float(value))
+        elif j==3:
+            value = value.replace(',non-slip_loss:','')
+            parameters[j-1].append(float(value))
+        elif j==4:
+            value = value.replace(',outlet_loss:','')
+            parameters[j-1].append(float(value))
+        elif j==5:
+            value = value.replace(',inlet_loss:','')
+            parameters[j-1].append(float(value))
+        elif j==6:
+            value = value.replace(',e1:','')
+            parameters[j-1].append(float(value))
+        elif j==7:
+            value = value.replace(',e2:','')
+            parameters[j-1].append(float(value))
+        elif j==8:
+            value = value.replace(',e3:','')
+            parameters[j-1].append(float(value))
+        elif j==9:
+            value = value.replace(',e4:','')
+            parameters[j-1].append(float(value))
+        elif j==10:
+            value = value.replace(',e5:','')
+            parameters[j-1].append(float(value))
 
-# パラメータの名前
-param_names = ['data_loss', 'pde_loss', 'bd_loss', 'initial_loss', 'ad_diff_eq_loss', 'x_momentum_loss', 'y_momentum_loss', 'z_momentum_loss', 'continuity_loss']
+# 一つの図に11個のグラフを描画
+plt.figure(figsize=(10, 8))  # 図のサイズを設定
+for i, parameter in enumerate(parameters):
+    plt.subplot(4, 3, i+1)  # 4行3列のサブプロットのi+1番目
+    plt.plot(parameter)
+    plt.title(titles[i])  # タイトルを設定
+    plt.xlabel("Counts")
+    plt.ylabel("Value")
+    plt.yscale('log')  # y軸を対数に設定
+plt.tight_layout()  # レイアウトを調整して重なりを解消
 
-# 各パラメータのプロット
-for i in range(3):
-    for j in range(3):
-        param_index = i * 3 + j
-        x_values = [epoch * 100 for epoch in range(len(params[param_index]))]
-        axs[i, j].plot(x_values, params[param_index])
-        axs[i, j].set_title(param_names[param_index])
-        axs[i, j].set_yscale('log')  # x軸を対数スケールに設定
-        axs[i, j].set_xlabel('Epoch [-]')
-        axs[i, j].set_ylabel('Loss [-]')
-
-        # x軸のラベルを10の何乗の形式に設定
-        axs[i, j].xaxis.set_major_formatter(ticker.ScalarFormatter())
-        axs[i, j].xaxis.get_major_formatter().set_scientific(True)
-        axs[i, j].xaxis.get_major_formatter().set_powerlimits((0, 0))
-
-# レイアウトの調整
-plt.tight_layout(rect=[0, 0, 1, 0.96])
-
+# グラフのタイトルやラベルの追加
+plt.xlabel("Counts")
+plt.ylabel("Value")
+plt.legend()
 
 # グラフを表示
-plt.savefig('detail_loss.png', dpi=600)
+plt.savefig('detail_loss.png')

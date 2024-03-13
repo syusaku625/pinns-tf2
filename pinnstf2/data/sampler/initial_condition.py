@@ -8,8 +8,8 @@ from .sampler_base import SamplerBase
 #rho = 1e3
 #mu = 1e-3
 
-L = 3e-4
-U = 3e-4
+L = 0.0115
+U = 4e-4
 rho = 1e3
 mu = 1e-3
 

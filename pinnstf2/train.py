@@ -30,7 +30,7 @@ OmegaConf.register_new_resolver("eval", eval)
 
 @utils.task_wrapper
 def train(
-    cfg: DictConfig, read_data_fn: Callable, pde_fn: Callable, output_fn: Callable = None
+    cfg: DictConfig, read_data_fn: Callable, pde_fn: Callable, pde_fn_cp: Callable, output_fn: Callable = None
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
     training.
@@ -120,7 +120,7 @@ def train(
     log.info(f"Instantiating model <{cfg.model._target_}>")
 
     model: PINNModule = hydra.utils.instantiate(cfg.model)(
-        net=net, pde_fn=pde_fn, output_fn=output_fn, dtype = cfg.dtype
+        net=net, pde_fn=pde_fn, pde_fn_cp=pde_fn_cp, output_fn=output_fn, dtype = cfg.dtype
     )
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")

@@ -28,7 +28,14 @@ train_datasets:
         - u
         - v
         - w
-        - c
+  - inlet_boundary_condition:
+      _target_: pinnstf2.data.InletBoundaryCondition
+      _partial_: true
+      solution:
+        - u
+        - v
+        - w
+        - c 
 
 val_dataset:
   - mesh_sampler:
@@ -41,7 +48,7 @@ test_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 10
+      idx_t: 1
       solution:
         - c
 
@@ -49,7 +56,7 @@ pred_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 10
+      idx_t: 1
       solution:
         - c
         - u
@@ -70,12 +77,12 @@ net:
 model:
   loss_fn: mse
   extra_variables:
-    l1: 1.0
-    l2: 1.0
+    l1: 161.06504
+    l2: 128.5464
   
 
 trainer:
-  max_epochs: 100000
+  max_epochs: 1000000
   check_val_every_n_epoch: 1000
 
 train: true

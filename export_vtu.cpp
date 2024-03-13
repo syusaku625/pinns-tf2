@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void export_vtu(const std::string &file, vector<vector<double>> x, vector<vector<int>> element, vector<vector<double>> v, vector<double> pressure, vector<double> c)
+void export_vtu(const std::string &file, vector<vector<double>> x, vector<vector<int>> element, vector<vector<double>> v, vector<double> pressure, vector<double> c, vector<int> index)
 {
   FILE *fp;
   if ((fp = fopen(file.c_str(), "w")) == NULL)
@@ -107,6 +107,7 @@ void export_vtu(const std::string &file, vector<vector<double>> x, vector<vector
   num=0;
   for (int ic = 0; ic < x.size(); ic++){
       data_d[num]   = c[ic];
+      //cout << ic << " " << c.size() << " " << c[ic] << endl;
       num++;
   }
   size=sizeof(double)*x.size();
@@ -203,9 +204,8 @@ void read_geometry_element(std::vector<vector<int>> &element, const int &numOfEl
   }
 }
 
-vector<double> read_scalar_value(string filename)
+vector<double> read_scalar_value(string filename, vector<double> &c, vector<int> index)
 {
-    vector<double> c; 
     ifstream ifs(filename);
     if(!ifs){
       cout << filename + " not found !" << endl;
@@ -213,19 +213,30 @@ vector<double> read_scalar_value(string filename)
     }
     string str;
     getline(ifs, str);
+    int count = 0;
     while(getline(ifs,str)){
         istringstream stream(str);
         for(int i=0; i<2; i++){
             getline(stream,str,',');
-            if(i==1) c.push_back(stod(str));
+            if(i==1) c[count] = (stod(str));
         }
+        count++;
     }
     return c;
 }
 
+void read_index(string ventricle_index_file, vector<int> &index)
+{
+    ifstream ifs(ventricle_index_file);
+    string str;
+    while(getline(ifs,str)){
+      index.push_back(stoi(str));
+    }
+}
+
 int main()
 {
-    string base_dir = "data/input_inverse";
+    string base_dir = "data/mouse33_velocity_collection";
     string x_file = base_dir + "/node.csv";
     string element_file = base_dir + "/element.csv";
     string elementType_file = base_dir + "/elementType.csv";
@@ -233,6 +244,7 @@ int main()
     vector<vector<double>> x;
     vector<vector<int>> element;
     vector<int> elementType;
+    vector<int> index;
 
     int numOfNode = CountNumbersOfTextLines(x_file);
     int numOfElm = CountNumbersOfTextLines(element_file);
@@ -253,15 +265,20 @@ int main()
 
     cout << "read scalar" << endl;
     string pred_file = "test_pred_c.csv";
-    vector<double> c = read_scalar_value(pred_file);
+    vector<double> c(numOfNode);
+    read_scalar_value(pred_file, c, index);
     pred_file = "test_pred_p.csv";
-    vector<double> p = read_scalar_value(pred_file);
+    vector<double> p(numOfNode);
+    read_scalar_value(pred_file, p, index);
     pred_file = "test_pred_u.csv";
-    vector<double> u = read_scalar_value(pred_file);
+    vector<double> u(numOfNode);
+    read_scalar_value(pred_file, u, index);
     pred_file = "test_pred_v.csv";
-    vector<double> v = read_scalar_value(pred_file);
+    vector<double> v(numOfNode);
+    read_scalar_value(pred_file, v, index);
     pred_file = "test_pred_w.csv";
-    vector<double> w = read_scalar_value(pred_file);
+    vector<double> w(numOfNode);
+    read_scalar_value(pred_file, w, index);
 
     cout << "append velocity" << endl;
     vector<vector<double>> velocity;
@@ -270,5 +287,7 @@ int main()
     velocity.push_back(w);
 
     string output = "test.vtu";
-    export_vtu(output, x, element, velocity, p, c);
+    cout << c.size() << endl;
+    cout << x.size() << endl;
+    export_vtu(output, x, element, velocity, p, c, index);
 }

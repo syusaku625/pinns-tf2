@@ -8,18 +8,23 @@ from tqdm import tqdm
 from pinnstf2 import utils
 import pinnstf2
 import h5py
+import pandas as pd
 
 log = utils.get_pylogger(__name__)
-
 
 class Trainer:
     """
     Trainer Class
     """
+    loss1_before = 0
+    loss2_before = 0
+    loss1_diff = 1.0
+    loss2_diff = 1.0
     
     def __init__(self,
                  max_epochs,
                  min_epochs: int=1,
+                 adaptive_weight : int = 1.0,
                  enable_progress_bar: bool=True,
                  check_val_every_n_epoch: int = 1,
                  default_root_dir: str = ""):
@@ -32,7 +37,7 @@ class Trainer:
         :param check_val_every_n_epoch: Frequency of validation checks within epochs.
         :param default_root_dir: Default directory for saving model-related files.
         """
-        
+        self.adaptive_weight = adaptive_weight
         self.min_epochs = min_epochs
         self.max_epochs = max_epochs
         self.enable_progress_bar = True
@@ -167,7 +172,6 @@ class Trainer:
             f.create_group('weights')
             f.create_group('biases')
             f.create_group('gammas')
-            print("check")
             for layer, weight in enumerate(net.weights):
                 f['weights'].create_dataset(str(layer), data=weight)
             for layer, biase in enumerate(net.biases):
@@ -221,7 +225,6 @@ class Trainer:
                     filename = str(epoch) + "_trained.h5"
                     self.save_train_data(filename, net)
             except KeyboardInterrupt:
-                print("check")
                 filename = str(epoch) + "_trained.h5"
                 self.save_train_data(filename, net)
                 raise
@@ -230,7 +233,6 @@ class Trainer:
                 
         if self.enable_progress_bar:
             self.pbar.close()
-
     
     def train_loop(self, model, train_dataloader, current_epoch):
         """
@@ -242,40 +244,46 @@ class Trainer:
         
         # Process the data in batches if batch size is specified
         if self.batch_size is not None:
-            
             train_data, self.train_current_index = self.next_batch(train_dataloader,
                                                                    self.train_current_index,
                                                                    self.train_dataset_size)
-            loss, loss1, loss2, loss3, loss4, extra_variables, preds_test, preds = model.train_step(train_data)
+            
+            loss, loss1, loss2, loss3, loss4, loss5, extra_variables, preds= model.train_step(train_data, self.adaptive_weight)
+            #self.loss1_diff = abs(loss1.numpy() - self.loss1_before)
+            #self.loss2_diff = abs(loss2.numpy() - self.loss2_before)
+            #self.loss1_before = loss1.numpy()
+            #self.loss2_before = loss2.numpy()
+            #self.adaptive_weight = (self.loss2_diff / self.loss1_diff)     
+            #if self.adaptive_weight>100.0:
+            #    self.adaptive_weight = 1.0   
             
         else:
             # If no batching is used, pass the entire dataloader to the train_step
-            loss, loss1, loss2, loss3, loss4, extra_variables, preds_test, preds = model.train_step(train_dataloader)
-
+            loss, loss1, loss2, loss3, loss4, loss5, extra_variables, preds = model.train_step(train_dataloader)
+        
         self.set_callback_metrics('train/loss', loss.numpy(), extra_variables)
 
-        e1 = tf.reduce_sum(tf.square(preds_test['e1']))
-        e2 = tf.reduce_sum(tf.square(preds_test['e2']))
-        e3 = tf.reduce_sum(tf.square(preds_test['e3']))
-        e4 = tf.reduce_sum(tf.square(preds_test['e4']))
-        e5 = tf.reduce_sum(tf.square(preds_test['e5']))
+        e1 = tf.reduce_sum(tf.square(preds['e1']))
+        e2 = tf.reduce_sum(tf.square(preds['e2']))
+        e3 = tf.reduce_sum(tf.square(preds['e3']))
+        e4 = tf.reduce_sum(tf.square(preds['e4']))
+        e5 = tf.reduce_sum(tf.square(preds['e5']))
 
+        ##loss1: pde loss, loss2: data_loss, loss3: non-slip loss, loss4: outlet loss, loss5: inlet loss, loss6: choroid plexus loss 
         if self.enable_progress_bar:
             self.pbar.update(1)
             description = self.callback_pbar(str(current_epoch) + ', train/loss', loss.numpy(), extra_variables)
             self.pbar.set_description(description)
             if current_epoch % 100 == 0:
                 f = open('train_loss_log.txt', 'a')
-                #try:
-                f.write(str(current_epoch) + ' ' + str(loss.numpy()) + ', ' + 'l1:' + str(extra_variables["l1"].numpy()) + ' ,l2:' + str(extra_variables["l2"].numpy()))
-                #except:
-                #    f.write(str(current_epoch) + ' ' + str(loss.numpy()))
+                f.write(str(current_epoch) + ' ' + str(loss.numpy())+ ' ' + str(extra_variables['l1'].numpy())+ ' ' + str(extra_variables['l2'].numpy()))
                 f.write('\n')
                 f.close()
             if current_epoch % 100 == 0:
                 f2 = open('detail_loss_log.txt', 'a')
-                f2.write(str(current_epoch) + ' data_loss:' + str(loss2.numpy()) + ', ' + 'pde_loss:' + str(loss1.numpy()) + ' ,bd_loss:' + str(loss3.numpy())\
-                    + ' ,initial_loss:' + str(loss4.numpy()) + ' ,e1:' + str(e1.numpy()) + ' ,e2:' + str(e2.numpy()) + ' ,e3:' + str(e3.numpy()) + ' ,e4:' + str(e4.numpy()) + ' ,e5:' + str(e5.numpy()))
+                f2.write(str(current_epoch) + ' data_loss:' + str(loss2.numpy()) + ', ' + 'pde_loss:' + str(loss1.numpy()) + ' ,non-slip_loss:' + str(loss3.numpy())\
+                    + ' ,outlet_loss:' + str(loss4.numpy()) + ' ,inlet_loss:' + str(loss5.numpy())\
+                    +' ,e1:' + str(e1.numpy()) + ' ,e2:' + str(e2.numpy())+ ' ,e3:' + str(e3.numpy()) + ' ,e4:' + str(e4.numpy()) + ' ,e5:' + str(e5.numpy()) + ' ,adaptive_weight:' + str(self.adaptive_weight))
                 f2.write('\n')
                 f2.close()
             self.pbar.refresh() 
@@ -288,9 +296,6 @@ class Trainer:
         :param model: The PINNModule.
         :param eval_dataloader: The validation data.
         """
-
-        
-        
         if self.batch_size is not None:
 
             iter = (self.eval_dataset_size[0]//self.batch_size) + 1
@@ -308,6 +313,8 @@ class Trainer:
                                                                     self.eval_dataset_size,
                                                                     shuffle=False)
                 loss_i, error_dict_i = model.validation_step(eval_data)
+                
+            
                 loss.append(loss_i.numpy())
                 for key, error_i in error_dict_i.items():
                     error_i = error_i.numpy()
@@ -362,13 +369,13 @@ class Trainer:
             
             if self.enable_progress_bar:
                 self.pred_pbar = self.initalize_tqdm(iter, mode='prediction', leave=False)
-            
             for i in range(iter):
                 pred_data, self.pred_current_index = self.next_batch(dataloader,
                                                                      self.pred_current_index,
                                                                      self.pred_dataset_size,
                                                                      shuffle=False)
                 preds_i = model.predict_step(pred_data)
+                data = model.give_boundary_data(pred_data)
 
                 for key, value in preds_i.items():
                     if key in preds.keys():
