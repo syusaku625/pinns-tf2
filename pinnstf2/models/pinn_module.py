@@ -3,7 +3,7 @@ from typing import List, Dict, Callable, Any, Tuple, Union
 import tensorflow as tf
 import sys, os, logging, time
 import tensorflow_probability as tfp
-
+import scipy.optimize as sopt
 import numpy as np
 from pinnstf2.utils import fwd_gradient, gradient
 from pinnstf2.utils import (
@@ -14,10 +14,6 @@ from pinnstf2.utils import (
 )
 
 class PINNModule:
-    loss_data_before = 0.0
-    loss_pde_before = 0.0
-    loss_data_difference = 1.0
-    loss_pde_difference = 1.0
     def __init__(
         self,
         net,
@@ -63,10 +59,16 @@ class PINNModule:
         self.rk = runge_kutta
         self.pde_fn = pde_fn
         self.pde_fn_cp = pde_fn_cp
-        self.opt = optimizer()
+        self.opt = tf.keras.optimizers.experimental.Adam()
+        #self.opt = tf.compat.v1.estimator.opt.ScipyOptimizerInterface(method = 'L-BFGS-B')
+        #self.opt = sopt.minimize(method='L-BFGS-B')
+        #self.opt = tf.keras.optimizers.experimental.SGD()
+        print(self.opt)
         self.amp = amp
         if self.amp:
             self.opt = tf.keras.mixed_precision.LossScaleOptimizer(self.opt)
+            #self.opt = tf.keras.optimizers.experimental.SGD(self.opt)
+            
 
         if jit_compile:
             self.train_step = tf.function(self.train_step, jit_compile=True)

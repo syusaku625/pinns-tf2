@@ -249,13 +249,6 @@ class Trainer:
                                                                    self.train_dataset_size)
             
             loss, loss1, loss2, loss3, loss4, loss5, extra_variables, preds= model.train_step(train_data, self.adaptive_weight)
-            #self.loss1_diff = abs(loss1.numpy() - self.loss1_before)
-            #self.loss2_diff = abs(loss2.numpy() - self.loss2_before)
-            #self.loss1_before = loss1.numpy()
-            #self.loss2_before = loss2.numpy()
-            #self.adaptive_weight = (self.loss2_diff / self.loss1_diff)     
-            #if self.adaptive_weight>100.0:
-            #    self.adaptive_weight = 1.0   
             
         else:
             # If no batching is used, pass the entire dataloader to the train_step
@@ -276,7 +269,7 @@ class Trainer:
             self.pbar.set_description(description)
             if current_epoch % 100 == 0:
                 f = open('train_loss_log.txt', 'a')
-                f.write(str(current_epoch) + ' ' + str(loss.numpy())+ ' ' + str(extra_variables['l1'].numpy())+ ' ' + str(extra_variables['l2'].numpy()))
+                f.write(str(current_epoch) + ' ' + str(loss.numpy()) + ' ' + str(extra_variables['l1'].numpy()) + ' ' + str(extra_variables['l2'].numpy()))
                 f.write('\n')
                 f.close()
             if current_epoch % 100 == 0:

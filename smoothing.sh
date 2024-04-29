@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for number in {0..41}
+for number in {0..20}
 do
     # 書き換え
     echo $((number+1))

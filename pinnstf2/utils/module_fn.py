@@ -5,6 +5,7 @@ import numpy as np
 
 def sse(loss: tf.Tensor,
         preds: Dict[str, tf.Tensor],
+        judge: str,
         target: Union[Dict[str, tf.Tensor], None] = None,
         keys: Union[List[str], None] = None,
         mid: Union[int, None] = None) -> tf.Tensor:

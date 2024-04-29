@@ -23,7 +23,7 @@ class FCN(object):
 
         self.lb = tf.constant(lb, tf.float32)
         self.ub = tf.constant(ub, tf.float32)
-
+        
         self.model = self.initalize_net(layers)
         self.output_names = output_names
         self.discrete = discrete
@@ -141,7 +141,7 @@ class NetHFM(object):
         self.initalize_net(layers)
 
     def read_h5_trained_data(self, filename):
-        loop = 11
+        loop = 13
         with h5py.File(filename, 'r') as f:
             weights, biases, gammas = [], [], []
             for i in range (0, loop):
@@ -162,34 +162,43 @@ class NetHFM(object):
 
         :param layers: The list indicating number of neurons in each layer.
         """
-
         self.weights = []
         self.biases = []
         self.gammas = []
-
+        #self.W = tf.Variable(tf.random.uniform([4, 20 //2  ], minval=-0.04, maxval=0.04, dtype=tf.float32) ,dtype=tf.float32, trainable=False)
+        #self.weights.append(self.W)
         #if use trained data comment out!
-        #filename = "29845_trained.h5"
-        #read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
-        #for i in range(0, 11):
-        #    self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
-        #    self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
-        #    self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
-        #for i in range(8, 17):
-        #    self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
-        #    self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
-        #    self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
+        filename = "199999_trained.h5"
+        read_weights, read_biases, read_gammas = self.read_h5_trained_data(filename)
+        for i in range(0, 13):
+            self.weights.append(tf.Variable(read_weights[i], dtype=tf.float32, trainable=True))
+            self.gammas.append(tf.Variable(read_gammas[i], dtype=tf.float32, trainable=True))
+            self.biases.append(tf.Variable(read_biases[i], dtype=tf.float32, trainable=True))
         
         #if not use trained data comment out!
-        for l in range(0,self.num_layers-1):
-            in_dim = layers[l]
-            out_dim = layers[l+1]
-            W = np.random.normal(size=[in_dim, out_dim])
-            b = np.zeros([1, out_dim])
-            g = np.ones([1, out_dim])
-            # tensorflow variables
-            self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
-            self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
-            self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
+        #W1 = np.random.normal(size=[4, layers[1]])
+        #W2 = np.random.normal(size=[4, layers[1]])
+        #self.weights.append(tf.Variable(W1, dtype=tf.float32, trainable=True))
+        #self.weights.append(tf.Variable(W2, dtype=tf.float32, trainable=True))
+        #b1 = np.zeros([1, layers[1]])
+        #b2 = np.zeros([1, layers[1]])
+        #self.biases.append(tf.Variable(b1, dtype=tf.float32, trainable=True))
+        #self.biases.append(tf.Variable(b2, dtype=tf.float32, trainable=True))
+        #g1 = np.ones([1, layers[1]])
+        #g2 = np.ones([1, layers[1]])
+        #self.gammas.append(tf.Variable(g1, dtype=tf.float32, trainable=True))
+        #self.gammas.append(tf.Variable(g2, dtype=tf.float32, trainable=True))
+    #
+        #for l in range(0,self.num_layers-1):
+        #    in_dim = layers[l]
+        #    out_dim = layers[l+1]
+        #    W = np.random.normal(size=[in_dim, out_dim])
+        #    b = np.zeros([1, out_dim])
+        #    g = np.ones([1, out_dim])
+        #    # tensorflow variables
+        #    self.weights.append(tf.Variable(W, dtype=tf.float32, trainable=True))
+        #    self.biases.append(tf.Variable(b, dtype=tf.float32, trainable=True))
+        #    self.gammas.append(tf.Variable(g, dtype=tf.float32, trainable=True))
 #
         self.trainable_variables.extend(self.weights)
         self.trainable_variables.extend(self.biases)
@@ -212,21 +221,41 @@ class NetHFM(object):
         else:
             x, y, z = spatial
             H = tf.concat((x, y, z, time), 1)
-        
         H = (H - self.X_mean) / self.X_std
-
+        W1 = self.weights[0]
+        W2 = self.weights[1]
+        b1 = self.biases[0]
+        b2 = self.biases[1]
+        g1 = self.gammas[0]
+        g2 = self.gammas[1]
+        V1 = W1/tf.norm(W1, axis = 0, keepdims=True)
+        V2 = W2/tf.norm(W2, axis = 0, keepdims=True)
+        H1 = tf.matmul(H, V1)
+        H2 = tf.matmul(H, V2)
+        H1 = g1 * H1 + b1
+        H2 = g2 * H2 + b2
+        #U_i = H1 * tf.sigmoid(H1)
+        #V_i = H2 * tf.sigmoid(H2)
+        U_i = tf.tanh(H1)
+        V_i = tf.tanh(H2)
+        #H = (tf.concat([tf.sin(tf.matmul(H, self.weights[0])), tf.cos(tf.matmul(H, self.weights[0]))], 1))
         for i, (W, b, g) in enumerate(zip(self.weights, self.biases, self.gammas)):
+            if i == 0 or i==1:
+                continue
             # weight normalization
-            V = W/tf.norm(W, axis = 0, keepdims=True)
+            V = self.weights[i]/tf.norm(self.weights[i], axis = 0, keepdims=True)
             # matrix multiplication
             H = tf.matmul(H, V)
             # add bias
             H = g * H + b
             # activation
-            if i < self.num_layers - 2:
+            if i < self.num_layers-3:
+                H = tf.add(tf.math.multiply(H, U_i), tf.math.multiply(1.0 - H, V_i))
+                #H = tf.tanh(H)
                 H = H * tf.sigmoid(H)
-                #H = tf.sin(H)
-        
+            else:
+                H = tf.tanh(H)
+                #H = H * tf.sigmoid(H)
         outputs_dict = {name: H[:, i : i + 1] for i, name in enumerate(self.output_names)}
 
         return outputs_dict

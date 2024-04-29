@@ -64,19 +64,24 @@ for i, line in enumerate(lines):
             parameters[j-1].append(float(value))
 
 # 一つの図に11個のグラフを描画
-plt.figure(figsize=(10, 8))  # 図のサイズを設定
-for i, parameter in enumerate(parameters):
-    plt.subplot(4, 3, i+1)  # 4行3列のサブプロットのi+1番目
-    plt.plot(parameter)
-    plt.title(titles[i])  # タイトルを設定
-    plt.xlabel("Counts")
-    plt.ylabel("Value")
-    plt.yscale('log')  # y軸を対数に設定
+#plt.figure(figsize=(10, 8))  # 図のサイズを設定
+#for i, parameter in enumerate(parameters):
+#    plt.subplot(4, 3, i+1)  # 4行3列のサブプロットのi+1番目
+#    plt.plot(parameter)
+#    plt.title(titles[i])  # タイトルを設定
+#    plt.xlabel("Counts")
+#    plt.ylabel("Value")
+#    plt.yscale('log')  # y軸を対数に設定
+plt.plot(parameters[0], color='red', label = 'data loss')
+plt.plot(parameters[1], color='blue', label = 'PDE loss')
+plt.plot(parameters[2], color='green', label = 'BC loss')
+print(len(parameters[0]))
+plt.yscale('log')
 plt.tight_layout()  # レイアウトを調整して重なりを解消
 
 # グラフのタイトルやラベルの追加
-plt.xlabel("Counts")
-plt.ylabel("Value")
+plt.xlabel("learning iteration [-]")
+plt.ylabel("Loss value [-]")
 plt.legend()
 
 # グラフを表示

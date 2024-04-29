@@ -93,7 +93,7 @@ class MeshSampler(SamplerBase):
         loss2 = functions["loss_fn"](loss2, outputs, judge, u, keys=self.solution_names)
         #adaptive_weight = tf.cast(adaptive_weight, dtype=tf.float32)
         loss1 = loss1
-        loss2 = loss2 
+        loss2 = loss2
         return loss1, loss2, outputs
 
 class ChoroidPlexusMeshSampler(SamplerBase):

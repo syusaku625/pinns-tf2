@@ -2,7 +2,7 @@ defaults:
   - train
   - _self_
 
-batch_size: 10000
+batch_size: 256
 
 mesh:
   _target_: pinnstf2.data.PointCloud
@@ -13,95 +13,80 @@ train_datasets:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      solution:
-        - c
       collection_points:
-        - e1
-        - e2
-        - e3
-        - e4
-        - e5
+        - f_u
+        - f_v
   - dirichlet_boundary_condition:
       _target_: pinnstf2.data.DirichletBoundaryCondition
       _partial_: true
       solution:
         - u
         - v
-        - w
   - outlet_boundary_condition:
       _target_: pinnstf2.data.PressureBoundaryCondition
       _partial_: true
       solution:
         - p
+  - inlet_boundary_condition:
+      _target_: pinnstf2.data.InletBoundaryCondition
+      _partial_: true
+      solution:
+        - u
+        - v
 
 val_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
       solution:
-        - c
         - u
         - v
-        - w
         - p
-    
+
 test_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 21
+      idx_t: 1
       solution:
-        - c
         - u
         - v
-        - w
+        - p
 
 pred_dataset:
   - mesh_sampler:
       _target_: pinnstf2.data.MeshSampler
       _partial_: true
-      idx_t: 21
+      idx_t: 1
       solution:
-        - c
         - u
         - v
-        - w
         - p
 
 net:
-  _target_: pinnstf2.models.NetHFM
-  layers: [4, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 5]
+  _target_: pinnstf2.models.FCN
+  layers: [3, 20, 20, 20, 20, 20, 20, 20, 20, 2]
   output_names:
-    - c
-    - u
-    - v
-    - w
+    - psi
     - p
 
 model:
   loss_fn: mse
-  extra_variables:
-    l1: 150.86221
-    l2: 97.008316
+  amp: false
 
 trainer:
-  max_epochs: 0
-  check_val_every_n_epoch: 4000
+  max_epochs: 100000
+  check_val_every_n_epoch: 5000
 
 train: true
 test: false
-val: true
+val: false
 
 optimized_metric:
   error:
-    - c
     - u
     - v
-    - w
     - p
-  extra_variables:
-    - l1
-    - l2
 
 plotting:
   _target_: pinnstf2.utils.plot_navier_stokes

@@ -1,8 +1,9 @@
 #include<iostream>
+#include<fstream>
 #include<vector>
 #include<string>
-#include<fstream>
 #include<sstream>
+#include<cmath>
 
 using namespace std;
 
@@ -87,9 +88,9 @@ void export_vtu(const std::string &file, vector<vector<double>> x, vector<vector
 
   num=0;
   for (int ic = 0; ic < x.size(); ic++){
-      data_d[num]   = v[0][ic];
-      data_d[num+1] = v[1][ic];
-      data_d[num+2] = v[2][ic];
+      data_d[num]   = v[ic][0];
+      data_d[num+1] = v[ic][1];
+      data_d[num+2] = v[ic][2];
       num=num+3;
   }
 
@@ -226,22 +227,31 @@ vector<double> read_scalar_value(string filename, vector<double> &c, vector<int>
     return c;
 }
 
-void read_index(string ventricle_index_file, vector<int> &index)
+vector<vector<double>> read_reference_velocity(string filename)
 {
-    ifstream ifs(ventricle_index_file);
-    string str;
-    while(getline(ifs,str)){
-      index.push_back(stoi(str));
+    ifstream ifs(filename);
+    if(!ifs){
+      cout << filename + " not found !" << endl;
+      exit(1);
     }
-}
+    string str;
+    vector<vector<double>> velocity;
+    getline(ifs, str);
+    while(getline(ifs,str)){
+        istringstream stream(str);
+        vector<double> tmp_vel;
+        for(int i=0; i<3; i++){
+            getline(stream,str,',');
+            tmp_vel.push_back(stod(str));
+        }
+        velocity.push_back(tmp_vel);
+    }
+    return velocity;
+} 
 
 int main()
 {
-    //string base_dir = "/mnt/d/test_case_csv";
-    //string x_file = base_dir + "/node.csv";
-    //string base_dir = "data/mouse33_velocity_collection";
-    string base_dir = "/mnt/d/test_case_pulsatile_csv";
-    //string base_dir = "/mnt/d/test_case_cylinder_csv";
+    string base_dir = "/mnt/d//test_case_pulsatile_csv";
     string x_file = base_dir + "/node.csv";
     string element_file = base_dir + "/element.csv";
     string elementType_file = base_dir + "/elementType.csv";
@@ -267,7 +277,6 @@ int main()
     read_geometry_element(element, numOfElm, element_file);
     cout << "read node" << endl;
     read_geometry_node(x, numOfNode, x_file);
-
 
     cout << "read scalar" << endl;
     string pred_file = "test_pred_c.csv";
@@ -295,9 +304,21 @@ int main()
     velocity.push_back(v);
     velocity.push_back(w);
 
-    cout << "export" << endl;
-    string output = "test.vtu";
-    cout << c.size() << endl;
-    cout << x.size() << endl;
-    export_vtu(output, x, element, velocity, p, c, index);
+    string file_reference_velocity = "/mnt/d//test_case_pulsatile_csv/reference_velocity.csv";
+    vector<vector<double>> reference_velocity = read_reference_velocity(file_reference_velocity);
+
+    vector<vector<double>> error_vel;
+    for(int i=0; i<x.size(); i++){
+        vector<double> tmp_velocity;
+        // u error
+        double error_u = fabs(velocity[0][i] * 0.05 - reference_velocity[i][0]);
+        double error_v = fabs(velocity[1][i] * 0.05 - reference_velocity[i][1]);
+        double error_w = fabs(velocity[2][i] * 0.05 - reference_velocity[i][2]);
+        tmp_velocity.push_back(error_u);
+        tmp_velocity.push_back(error_v);
+        tmp_velocity.push_back(error_w);
+        error_vel.push_back(tmp_velocity);
+    }
+    string output = "error.vtu";
+    export_vtu(output, x, element, error_vel, p, c, index);
 }
